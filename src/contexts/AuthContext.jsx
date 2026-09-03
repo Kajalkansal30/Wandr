@@ -64,6 +64,7 @@ export function AuthProvider({ children }) {
     clearSession();
     setUser(null);
     setRole(null);
+    window.location.href = "/";
   }
 
   const value = {

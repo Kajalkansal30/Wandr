@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Star, Heart, Clock, Phone, AtSign as InstagramIcon,
   Wifi, Plug, Volume2, Car, PawPrint, Moon, Camera, Share2, Navigation, Flag,
-  CheckCircle,
+  CheckCircle, Edit, BarChart3,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
@@ -32,7 +32,7 @@ const TABS = ["Overview", "Menu", "Reviews", "Info"];
 export default function CafeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { getById } = usePlaces();
   const [cafe, setCafe] = useState(() => getById(id));
   const [loadingCafe, setLoadingCafe] = useState(!getById(id));
@@ -222,6 +222,35 @@ export default function CafeDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Owner manage bar */}
+      {user && (role === "owner" || role === "admin") && cafe.ownerDisplayName && (
+        <div className="mt-3 flex items-center justify-between rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-warm-700">Your listing</p>
+            <p className="text-xs text-warm-400">
+              {cafe.status === "approved" || cafe.status === "APPROVED" ? "Live on Discover" : `Status: ${cafe.status}`}
+              {cafe.ownershipStatus === "OWNER_VERIFIED" && " · Verified"}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-warm-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-warm-700"
+            >
+              <Edit size={13} /> Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/owner/dashboard?tab=analytics")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-warm-200 bg-white px-3.5 py-2 text-xs font-semibold text-warm-600 transition hover:bg-warm-50"
+            >
+              <BarChart3 size={13} /> Analytics
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Decision-first viewport */}
       <div className="mt-5 w-full md:mt-6">
@@ -555,6 +584,43 @@ export default function CafeDetailPage() {
               </button>
             )}
           </div>
+        )}
+      </div>
+
+      {/* Engagement CTA */}
+      <div className="mt-8 mb-4 space-y-3">
+        {activeTab !== "Reviews" && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("Reviews")}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
+          >
+            <Star size={15} className="text-gold-400" />
+            {user ? "Write a review" : "Read reviews"}
+          </button>
+        )}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={toggleSave}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
+          >
+            <Heart size={15} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
+            {saved ? "Saved" : "Save for later"}
+          </button>
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
+          >
+            <Share2 size={15} /> Share
+          </button>
+        </div>
+        {!user && (
+          <p className="text-center text-xs text-warm-400">
+            <button type="button" onClick={() => navigate("/login")} className="font-semibold text-warm-600 underline">Sign in</button>
+            {" "}to save, review, and build your collection
+          </p>
         )}
       </div>
 
