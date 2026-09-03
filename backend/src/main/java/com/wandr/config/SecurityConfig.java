@@ -40,8 +40,10 @@ public class SecurityConfig {
         .cors(Customizer.withDefaults())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers("/api/auth/**", "/api/health").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/analytics/events").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/places").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/places/**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/places/community").authenticated()
             .requestMatchers(HttpMethod.POST, "/api/places/*/claim").authenticated()
@@ -75,12 +77,16 @@ public class SecurityConfig {
         .map(String::trim)
         .filter(s -> !s.isEmpty())
         .toList();
-    config.setAllowedOriginPatterns(patterns.isEmpty()
-        ? List.of("http://localhost:*", "http://127.0.0.1:*")
-        : patterns);
+    if (patterns.isEmpty()) {
+      config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+    } else {
+      config.setAllowedOriginPatterns(patterns);
+    }
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
+    config.setExposedHeaders(List.of("*"));
     config.setAllowCredentials(true);
+    config.setMaxAge(3600L);
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", config);
     return source;

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader, AlertCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { createPlace } from "../../api/owner";
 import MapPinPicker from "../../components/MapPinPicker";
@@ -30,11 +30,22 @@ const allTags = [
 
 const STEPS = ["What are you?", "Get discovered", "Make it beautiful", "Go live"];
 
+function FieldError({ message }) {
+  if (!message) return null;
+  return (
+    <p className="mt-1 flex items-center gap-1 text-xs text-terracotta-500">
+      <AlertCircle size={12} /> {message}
+    </p>
+  );
+}
+
 export default function RegisterCafePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState(false);
   const [form, setForm] = useState({
     locationType: "",
     name: "",
@@ -60,6 +71,13 @@ export default function RegisterCafePage() {
 
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
   }
 
   function toggleTag(tag) {
@@ -76,8 +94,53 @@ export default function RegisterCafePage() {
   const isMobile = ["FOOD_TRUCK", "POP_UP", "STREET_FOOD"].includes(form.locationType);
   const isHome = ["HOME_BAKERY", "HOME_KITCHEN"].includes(form.locationType);
 
+  function validateStep(s) {
+    const e = {};
+    if (s === 0) {
+      if (!form.locationType) e.locationType = "Choose what type of place you are";
+    }
+    if (s === 1) {
+      if (!form.name.trim()) e.name = "Name is required";
+      if (!form.category) e.category = "Pick a category";
+      if (!form.phone.trim()) e.phone = "Phone number is required";
+      if (!form.city.trim()) e.city = "City is required";
+      if (isMobile) {
+        if (!form.serviceArea.trim()) e.serviceArea = "Tell people where you operate";
+      } else {
+        if (!form.address.trim()) e.address = "Address is required";
+      }
+    }
+    if (s === 2) {
+      if (!form.description.trim() && form.tags.length === 0) {
+        e.description = "Add a description or pick at least one vibe tag";
+      }
+    }
+    return e;
+  }
+
+  function tryAdvance() {
+    setTouched(true);
+    const stepErrors = validateStep(step);
+    setErrors(stepErrors);
+    if (Object.keys(stepErrors).length > 0) return;
+    setTouched(false);
+    setStep(step + 1);
+  }
+
+  function canSubmit() {
+    for (let s = 0; s <= 2; s++) {
+      if (Object.keys(validateStep(s)).length > 0) return false;
+    }
+    return true;
+  }
+
   async function handleSubmit() {
     if (!user || submitting) return;
+    const allErrors = { ...validateStep(0), ...validateStep(1), ...validateStep(2) };
+    if (Object.keys(allErrors).length > 0) {
+      setErrors(allErrors);
+      return;
+    }
     setSubmitting(true);
     try {
       await createPlace({
@@ -102,7 +165,7 @@ export default function RegisterCafePage() {
         bestFor: form.bestFor,
         avgCostForTwo: form.avgCostForTwo ? Number(form.avgCostForTwo) : null,
       });
-      navigate("/owner/dashboard");
+      navigate("/owner/dashboard?registered=1");
     } catch (err) {
       alert(err.message || "Failed to submit. Please try again.");
     } finally {
@@ -154,36 +217,52 @@ export default function RegisterCafePage() {
               </button>
             ))}
           </div>
+          {touched && <FieldError message={errors.locationType} />}
         </div>
       )}
 
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">Name</label>
-            <input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="e.g. Moon & Moss Café" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3 text-warm-700" />
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">
+              Name <span className="text-terracotta-500">*</span>
+            </label>
+            <input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="e.g. Moon & Moss Café" className={`w-full rounded-xl border bg-white px-4 py-3 text-warm-700 ${errors.name ? "border-terracotta-400" : "border-warm-100"}`} />
+            <FieldError message={errors.name} />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">Category</label>
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">
+              Category <span className="text-terracotta-500">*</span>
+            </label>
             <div className="flex flex-wrap gap-2">
               {categories.map((c) => (
                 <button key={c} type="button" onClick={() => update("category", c)} className={`rounded-xl px-3.5 py-2 text-sm font-medium ${form.category === c ? "bg-warm-500 text-white" : "border border-warm-100 bg-white text-warm-500"}`}>{c}</button>
               ))}
             </div>
+            <FieldError message={errors.category} />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">Phone</label>
-            <input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+91 …" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">
+              Phone <span className="text-terracotta-500">*</span>
+            </label>
+            <input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+91 …" className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.phone ? "border-terracotta-400" : "border-warm-100"}`} />
+            <FieldError message={errors.phone} />
           </div>
           {isMobile ? (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-warm-600">Usually found / operating areas</label>
-              <textarea value={form.serviceArea} onChange={(e) => update("serviceArea", e.target.value)} rows={2} placeholder="e.g. Outside IIT main gate on weekends" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+              <label className="mb-1.5 block text-sm font-medium text-warm-600">
+                Usually found / operating areas <span className="text-terracotta-500">*</span>
+              </label>
+              <textarea value={form.serviceArea} onChange={(e) => update("serviceArea", e.target.value)} rows={2} placeholder="e.g. Outside IIT main gate on weekends" className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.serviceArea ? "border-terracotta-400" : "border-warm-100"}`} />
+              <FieldError message={errors.serviceArea} />
             </div>
           ) : (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-warm-600">{isHome ? "Public area / city landmark" : "Address"}</label>
-              <textarea value={form.address} onChange={(e) => update("address", e.target.value)} rows={2} className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+              <label className="mb-1.5 block text-sm font-medium text-warm-600">
+                {isHome ? "Public area / city landmark" : "Address"} <span className="text-terracotta-500">*</span>
+              </label>
+              <textarea value={form.address} onChange={(e) => update("address", e.target.value)} rows={2} className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.address ? "border-terracotta-400" : "border-warm-100"}`} />
+              <FieldError message={errors.address} />
             </div>
           )}
           {isHome && (
@@ -193,8 +272,11 @@ export default function RegisterCafePage() {
             </div>
           )}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">City</label>
-            <input value={form.city} onChange={(e) => update("city", e.target.value)} placeholder="Delhi" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">
+              City <span className="text-terracotta-500">*</span>
+            </label>
+            <input value={form.city} onChange={(e) => update("city", e.target.value)} placeholder="Delhi" className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.city ? "border-terracotta-400" : "border-warm-100"}`} />
+            <FieldError message={errors.city} />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-warm-600">Hours / schedule</label>
@@ -216,11 +298,16 @@ export default function RegisterCafePage() {
             <input value={form.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} placeholder="https://…" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">Description</label>
-            <textarea value={form.description} onChange={(e) => update("description", e.target.value)} rows={3} className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">
+              Description <span className="text-terracotta-500">*</span>
+            </label>
+            <textarea value={form.description} onChange={(e) => update("description", e.target.value)} rows={3} className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.description ? "border-terracotta-400" : "border-warm-100"}`} />
+            {!form.description.trim() && form.tags.length === 0 && (
+              <FieldError message={errors.description} />
+            )}
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">Vibe tags</label>
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">Vibe tags {!form.description.trim() && <span className="text-terracotta-500">*</span>}</label>
             <div className="flex flex-wrap gap-2">
               {allTags.map((tag) => (
                 <button key={tag} type="button" onClick={() => toggleTag(tag)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${form.tags.includes(tag) ? "bg-warm-500 text-white" : "border border-warm-100 bg-white text-warm-500"}`}>{tag}</button>
@@ -243,8 +330,17 @@ export default function RegisterCafePage() {
             <p className="text-sm text-warm-400">{form.locationType} · {form.category} · {"₹".repeat(form.priceLevel)}</p>
             {form.description && <p className="text-sm text-warm-500">{form.description}</p>}
             <p className="text-sm text-warm-400">{isMobile ? form.serviceArea : form.address}{form.city && `, ${form.city}`}</p>
+            {form.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {form.tags.map((t) => (
+                  <span key={t} className="rounded-full bg-warm-100 px-2.5 py-1 text-xs font-medium text-warm-500">{t}</span>
+                ))}
+              </div>
+            )}
           </div>
-          <p className="text-center text-xs text-warm-400">Submit for review — ownership claimed, verification comes after admin approval.</p>
+          <div className="rounded-xl border border-gold-200 bg-gold-50 px-4 py-3 text-center">
+            <p className="text-sm font-medium text-gold-600">Submit for review — ownership claimed, verification comes after admin approval.</p>
+          </div>
         </div>
       )}
 
@@ -252,8 +348,7 @@ export default function RegisterCafePage() {
         {step < 3 ? (
           <button
             type="button"
-            disabled={step === 0 && !form.locationType}
-            onClick={() => setStep(step + 1)}
+            onClick={tryAdvance}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white transition hover:bg-warm-700 disabled:opacity-50"
           >
             Continue <ArrowRight size={18} />
@@ -262,7 +357,7 @@ export default function RegisterCafePage() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || !canSubmit()}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-sage-400 py-3.5 font-semibold text-white transition hover:bg-sage-500 disabled:opacity-60"
           >
             {submitting ? <><Loader size={18} className="animate-spin" /> Submitting...</> : "Go live — submit for review"}

@@ -21,7 +21,7 @@ services:
       - key: JPA_DDL_AUTO
         value: update
       - key: WANDR_CORS_ORIGINS
-        value: http://localhost:*,http://127.0.0.1:*,https://*.onrender.com
+        value: https://wandr-web.onrender.com,http://localhost:*,http://127.0.0.1:*,https://*.onrender.com
 
   # Static sites have no plan field (always free bandwidth-wise)
   - type: web

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Store, Clock, CheckCircle, XCircle, Edit, Heart, BarChart3, ArrowLeft, Rocket, Navigation, Phone, Share2, Eye, Shield } from "lucide-react";
+import { Plus, Store, Clock, CheckCircle, XCircle, Edit, Heart, BarChart3, ArrowLeft, Rocket, Navigation, Phone, Share2, Eye, Shield, AlertTriangle, Ban } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchMyPlaces } from "../../api/owner";
 import { fetchOwnerAnalytics, fetchMyBoosts } from "../../api/ownerAnalytics";
@@ -8,9 +8,18 @@ import { FunnelChart, MetricBars, Sparkline, SourcePieList } from "../../compone
 import { api } from "../../api/client";
 
 const statusConfig = {
-  pending: { label: "Pending", icon: Clock, color: "bg-gold-100 text-gold-400" },
+  pending: { label: "Pending review", icon: Clock, color: "bg-gold-100 text-gold-500" },
+  pending_review: { label: "Pending review", icon: Clock, color: "bg-gold-100 text-gold-500" },
+  PENDING: { label: "Pending review", icon: Clock, color: "bg-gold-100 text-gold-500" },
+  PENDING_REVIEW: { label: "Pending review", icon: Clock, color: "bg-gold-100 text-gold-500" },
   approved: { label: "Live", icon: CheckCircle, color: "bg-sage-100 text-sage-500" },
+  APPROVED: { label: "Live", icon: CheckCircle, color: "bg-sage-100 text-sage-500" },
   rejected: { label: "Rejected", icon: XCircle, color: "bg-terracotta-50 text-terracotta-500" },
+  REJECTED: { label: "Rejected", icon: XCircle, color: "bg-terracotta-50 text-terracotta-500" },
+  suspended: { label: "Suspended", icon: Ban, color: "bg-terracotta-50 text-terracotta-400" },
+  SUSPENDED: { label: "Suspended", icon: Ban, color: "bg-terracotta-50 text-terracotta-400" },
+  closed: { label: "Closed", icon: XCircle, color: "bg-warm-100 text-warm-400" },
+  CLOSED: { label: "Closed", icon: XCircle, color: "bg-warm-100 text-warm-400" },
 };
 
 export default function DashboardPage() {
@@ -28,6 +37,7 @@ export default function DashboardPage() {
   const [boosts, setBoosts] = useState([]);
   const [trust, setTrust] = useState(null);
   const [trustPlaceId, setTrustPlaceId] = useState(null);
+  const justRegistered = searchParams.get("registered") === "1";
 
   useEffect(() => {
     async function fetchMyCafes() {
@@ -178,69 +188,90 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {tab === "cafes" &&
-        (cafes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warm-100">
-              <Store size={28} className="text-warm-300" />
+      {tab === "cafes" && (
+        <>
+          {justRegistered && (
+            <div className="mb-4 rounded-xl border border-sage-200 bg-sage-50 px-4 py-3 text-center">
+              <p className="text-sm font-semibold text-sage-600">
+                <CheckCircle size={14} className="mr-1.5 inline -mt-0.5" />
+                Place submitted! It's now waiting for admin approval.
+              </p>
             </div>
-            <h3 className="mb-1 text-lg font-semibold text-warm-600">No cafes registered</h3>
-            <p className="mb-6 max-w-[260px] text-sm text-warm-400">
-              List your cafe on wandr and reach new customers
-            </p>
-            <Link
-              to="/owner/register-cafe"
-              className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-warm-700"
-            >
-              <Plus size={18} /> Register Your Cafe
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {cafes.map((cafe) => {
-              const cfg = statusConfig[cafe.status] || statusConfig.pending;
-              const StatusIcon = cfg.icon;
-              return (
-                <div
-                  key={cafe.id}
-                  className="flex items-center gap-4 rounded-xl border border-warm-100 bg-white p-4"
-                >
-                  <img
-                    src={cafe.image}
-                    alt=""
-                    className="h-16 w-16 shrink-0 rounded-lg object-cover bg-warm-100"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate font-bold text-warm-700">{cafe.name}</h3>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${cfg.color}`}>
-                        <StatusIcon size={11} /> {cfg.label}
-                      </span>
-                      {cafe.ownershipStatus === "OWNER_VERIFIED" && (
-                        <span className="text-[11px] font-medium text-sage-500">✓ Owner verified</span>
-                      )}
-                      {cafe.ownershipStatus === "OWNER_CLAIMED" && cafe.status === "approved" && (
-                        <span className="text-[11px] font-medium text-warm-400">Claimed · verify to unlock trust</span>
-                      )}
-                      {cafe.needsInfoReasons && (
-                        <span className="text-[11px] font-medium text-gold-400">Needs info</span>
+          )}
+          {cafes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warm-100">
+                <Store size={28} className="text-warm-300" />
+              </div>
+              <h3 className="mb-1 text-lg font-semibold text-warm-600">No cafes registered</h3>
+              <p className="mb-6 max-w-[260px] text-sm text-warm-400">
+                List your cafe on wandr and reach new customers
+              </p>
+              <Link
+                to="/owner/register-cafe"
+                className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-warm-700"
+              >
+                <Plus size={18} /> Register Your Cafe
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cafes.map((cafe) => {
+                const st = cafe.status?.toLowerCase() || "pending";
+                const isPending = st === "pending" || st === "pending_review";
+                const cfg = statusConfig[cafe.status] || statusConfig[st] || statusConfig.pending;
+                const StatusIcon = cfg.icon;
+                return (
+                  <div
+                    key={cafe.id}
+                    className={`flex items-center gap-4 rounded-xl border p-4 ${isPending ? "border-gold-200 bg-gold-50/40" : "border-warm-100 bg-white"}`}
+                  >
+                    <img
+                      src={cafe.image}
+                      alt=""
+                      className="h-16 w-16 shrink-0 rounded-lg object-cover bg-warm-100"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate font-bold text-warm-700">{cafe.name}</h3>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${cfg.color}`}>
+                          <StatusIcon size={11} /> {cfg.label}
+                        </span>
+                        {cafe.ownershipStatus === "OWNER_VERIFIED" && (
+                          <span className="text-[11px] font-medium text-sage-500">✓ Owner verified</span>
+                        )}
+                        {cafe.ownershipStatus === "OWNER_CLAIMED" && !isPending && (
+                          <span className="text-[11px] font-medium text-warm-400">Claimed · verify to unlock trust</span>
+                        )}
+                        {cafe.needsInfoReasons && (
+                          <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-gold-500">
+                            <AlertTriangle size={10} /> Needs info
+                          </span>
+                        )}
+                      </div>
+                      {isPending ? (
+                        <p className="mt-0.5 text-xs text-gold-500">Waiting for admin approval</p>
+                      ) : (
+                        <p className="mt-0.5 text-xs text-warm-400">
+                          {cafe.savedCount || 0} saves · {cafe.reviewCount || 0} reviews
+                        </p>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs text-warm-400">
-                      {cafe.savedCount || 0} saves · {cafe.reviewCount || 0} reviews
-                    </p>
+                    {!isPending && (
+                      <Link
+                        to={`/owner/edit-cafe/${cafe.id}`}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-warm-50 text-warm-500 hover:bg-warm-100"
+                      >
+                        <Edit size={16} />
+                      </Link>
+                    )}
                   </div>
-                  <Link
-                    to={`/owner/edit-cafe/${cafe.id}`}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-warm-50 text-warm-500 hover:bg-warm-100"
-                  >
-                    <Edit size={16} />
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
 
       {tab === "trust" && (
         <div className="space-y-5">
