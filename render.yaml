@@ -23,10 +23,10 @@ services:
       - key: WANDR_CORS_ORIGINS
         value: http://localhost:*,http://127.0.0.1:*,https://*.onrender.com
 
+  # Static sites have no plan field (always free bandwidth-wise)
   - type: web
     name: wandr-web
     runtime: static
-    plan: free
     rootDir: .
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
