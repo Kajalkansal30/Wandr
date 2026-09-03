@@ -22,8 +22,8 @@ wandr:
     secret: ${WANDR_JWT_SECRET:wandr-dev-secret-change-me-in-production-32chars-min}
     expiration-ms: ${WANDR_JWT_EXPIRATION_MS:86400000}
   cors:
-    # Comma-separated origins/patterns. Render frontend + local Vite.
-    allowed-origin-patterns: ${WANDR_CORS_ORIGINS:http://localhost:*,http://127.0.0.1:*}
+    # Comma-separated origins/patterns. Exact Render web + local Vite.
+    allowed-origin-patterns: ${WANDR_CORS_ORIGINS:https://wandr-web.onrender.com,http://localhost:*,http://127.0.0.1:*,https://*.onrender.com}
 
 logging:
   level:

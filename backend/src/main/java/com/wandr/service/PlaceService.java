@@ -6,6 +6,7 @@ import com.wandr.repo.PlaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Comparator;
@@ -22,6 +23,7 @@ public class PlaceService {
   private final PlaceRepository placeRepository;
   private final BoostService boostService;
 
+  @Transactional(readOnly = true)
   public List<PlaceDtos.PlaceResponse> listApproved(Double lat, Double lng) {
     var activeBoosts = boostService.activeByPlaceId();
     return placeRepository.findByStatusOrderByCreatedAtDesc(PlaceStatus.APPROVED).stream()
@@ -31,6 +33,7 @@ public class PlaceService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public PlaceDtos.PlaceResponse getApproved(Long id, Double lat, Double lng) {
     Place place = placeRepository.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
@@ -40,12 +43,14 @@ public class PlaceService {
     return boostService.enrich(place, distanceKm(lat, lng, place.getLat(), place.getLng()), boostService.activeByPlaceId());
   }
 
+  @Transactional(readOnly = true)
   public PlaceDtos.PlaceResponse getAny(Long id) {
     Place place = placeRepository.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
     return PlaceDtos.PlaceResponse.from(place, null);
   }
 
+  @Transactional(readOnly = true)
   public List<PlaceDtos.PlaceResponse> listByStatus(PlaceStatus status) {
     if (status == PlaceStatus.PENDING_REVIEW || status == PlaceStatus.PENDING) {
       return placeRepository.findAll().stream()
@@ -72,16 +77,19 @@ public class PlaceService {
     return placeRepository.countByOwnershipStatus(status);
   }
 
+  @Transactional(readOnly = true)
   public List<PlaceDtos.PlaceResponse> listByOwner(User owner) {
     return placeRepository.findByOwnerIdOrderByCreatedAtDesc(owner.getId()).stream()
         .map(p -> PlaceDtos.PlaceResponse.from(p, null))
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public PlaceDtos.PlaceResponse getOwned(User owner, Long id) {
     return PlaceDtos.PlaceResponse.from(requireOwned(owner, id), null);
   }
 
+  @Transactional(readOnly = true)
   public Place requireOwned(User owner, Long id) {
     Place place = placeRepository.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
@@ -96,6 +104,7 @@ public class PlaceService {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
   }
 
+  @Transactional
   public PlaceDtos.PlaceResponse create(User owner, PlaceDtos.PlaceUpsertRequest req) {
     if (req.name() == null || req.name().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
@@ -136,6 +145,7 @@ public class PlaceService {
     return PlaceDtos.PlaceResponse.from(placeRepository.save(place), null);
   }
 
+  @Transactional
   public PlaceDtos.PlaceResponse createCommunity(User user, PlaceDtos.CommunitySubmitRequest req) {
     if (req == null || req.name() == null || req.name().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
@@ -165,6 +175,7 @@ public class PlaceService {
     return PlaceDtos.PlaceResponse.from(placeRepository.save(place), null);
   }
 
+  @Transactional
   public PlaceDtos.PlaceResponse update(User owner, Long id, PlaceDtos.PlaceUpsertRequest req) {
     Place place = requireOwned(owner, id);
     if (req.name() != null && !req.name().isBlank()) place.setName(req.name().trim());

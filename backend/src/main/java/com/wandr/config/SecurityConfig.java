@@ -1,6 +1,7 @@
 package com.wandr.config;
 
 import com.wandr.security.JwtAuthFilter;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -40,11 +41,13 @@ public class SecurityConfig {
         .cors(Customizer.withDefaults())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
+            // Spring Security 6: ERROR/FORWARD dispatches must be permitted or real exceptions become opaque 403s
+            .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
+            .requestMatchers("/error").permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers("/api/auth/**", "/api/health").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/analytics/events").permitAll()
-            .requestMatchers(HttpMethod.GET, "/api/places").permitAll()
-            .requestMatchers(HttpMethod.GET, "/api/places/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/places", "/api/places/**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/places/community").authenticated()
             .requestMatchers(HttpMethod.POST, "/api/places/*/claim").authenticated()
             .requestMatchers(HttpMethod.POST, "/api/places/*/confirm").authenticated()
@@ -78,7 +81,12 @@ public class SecurityConfig {
         .filter(s -> !s.isEmpty())
         .toList();
     if (patterns.isEmpty()) {
-      config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+      config.setAllowedOriginPatterns(List.of(
+          "http://localhost:*",
+          "http://127.0.0.1:*",
+          "https://wandr-web.onrender.com",
+          "https://*.onrender.com"
+      ));
     } else {
       config.setAllowedOriginPatterns(patterns);
     }

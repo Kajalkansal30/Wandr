@@ -3,7 +3,8 @@ import { Home, Heart, MapIcon, User, Plus } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function BottomNav() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isOwner = role === "owner" || role === "admin";
 
   const base = "flex flex-col items-center gap-0.5 text-xs font-medium transition-all px-3";
 
@@ -24,11 +25,11 @@ export default function BottomNav() {
           <span>Map</span>
         </NavLink>
 
-        <NavLink to="/submit" className={cls}>
+        <NavLink to={isOwner ? "/owner/dashboard" : "/submit"} className={cls}>
           <div className="w-10 h-10 -mt-4 rounded-full bg-warm-600 text-white flex items-center justify-center shadow-md">
             <Plus size={20} />
           </div>
-          <span className="-mt-0.5">Add</span>
+          <span className="-mt-0.5">{isOwner ? "Hub" : "Add"}</span>
         </NavLink>
 
         {user ? (

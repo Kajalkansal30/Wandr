@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
-import { Heart, MapPin, Star, Award, Compass, ArrowRight, ArrowLeft } from "lucide-react";
+import { Heart, MapPin, Star, Award, Compass, ArrowRight, ArrowLeft, Store, Shield } from "lucide-react";
 import { loadSavedIds } from "../utils/favorites";
 import { computeBadges } from "../utils/badges";
 
@@ -115,6 +115,33 @@ export default function ProfilePage() {
       </section>
 
       <section className="mb-8 space-y-2">
+        {(role === "owner" || role === "admin") && (
+          <button
+            type="button"
+            onClick={() => navigate("/owner/dashboard")}
+            className="flex w-full items-center justify-between rounded-xl border border-warm-200 bg-warm-50 p-4 transition hover:bg-warm-100"
+          >
+            <span className="flex items-center gap-3 text-sm font-semibold text-warm-700">
+              <Store size={16} className="text-warm-600" /> Business Hub
+            </span>
+            <span className="flex items-center gap-2 text-xs text-warm-400">
+              Listings · Trust · Analytics
+              <ArrowRight size={16} className="text-warm-300" />
+            </span>
+          </button>
+        )}
+        {role === "admin" && (
+          <button
+            type="button"
+            onClick={() => navigate("/admin")}
+            className="flex w-full items-center justify-between rounded-xl border border-warm-100 bg-white p-4 transition hover:bg-warm-50"
+          >
+            <span className="flex items-center gap-3 text-sm font-semibold text-warm-700">
+              <Shield size={16} className="text-warm-600" /> Command Center
+            </span>
+            <ArrowRight size={16} className="text-warm-300" />
+          </button>
+        )}
         <button type="button" onClick={() => navigate("/saved")} className="flex w-full items-center justify-between rounded-xl border border-warm-100 bg-white p-4 transition hover:bg-warm-50">
           <span className="flex items-center gap-3 text-sm font-semibold text-warm-700">
             <Heart size={16} className="text-terracotta-400" /> Saved Places

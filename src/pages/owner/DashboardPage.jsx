@@ -219,12 +219,15 @@ export default function DashboardPage() {
               {cafes.map((cafe) => {
                 const st = cafe.status?.toLowerCase() || "pending";
                 const isPending = st === "pending" || st === "pending_review";
+                const isLive = st === "approved";
                 const cfg = statusConfig[cafe.status] || statusConfig[st] || statusConfig.pending;
                 const StatusIcon = cfg.icon;
                 return (
-                  <div
+                  <button
                     key={cafe.id}
-                    className={`flex items-center gap-4 rounded-xl border p-4 ${isPending ? "border-gold-200 bg-gold-50/40" : "border-warm-100 bg-white"}`}
+                    type="button"
+                    onClick={() => navigate(isLive ? `/cafe/${cafe.id}` : `/owner/edit-cafe/${cafe.id}`)}
+                    className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:shadow-sm ${isPending ? "border-gold-200 bg-gold-50/40" : "border-warm-100 bg-white"}`}
                   >
                     <img
                       src={cafe.image}
@@ -250,22 +253,15 @@ export default function DashboardPage() {
                         )}
                       </div>
                       {isPending ? (
-                        <p className="mt-0.5 text-xs text-gold-500">Waiting for admin approval</p>
+                        <p className="mt-0.5 text-xs text-gold-500">Waiting for admin approval · tap to edit</p>
                       ) : (
                         <p className="mt-0.5 text-xs text-warm-400">
-                          {cafe.savedCount || 0} saves · {cafe.reviewCount || 0} reviews
+                          {cafe.city || cafe.address || "—"} · {cafe.savedCount || 0} saves · {cafe.reviewCount || 0} reviews
                         </p>
                       )}
                     </div>
-                    {!isPending && (
-                      <Link
-                        to={`/owner/edit-cafe/${cafe.id}`}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-warm-50 text-warm-500 hover:bg-warm-100"
-                      >
-                        <Edit size={16} />
-                      </Link>
-                    )}
-                  </div>
+                    <Edit size={16} className="shrink-0 text-warm-300" />
+                  </button>
                 );
               })}
             </div>
