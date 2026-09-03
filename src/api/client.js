@@ -1,8 +1,23 @@
 function resolveApiBase(raw) {
-  const value = (raw || "http://localhost:8080").trim().replace(/\/$/, "");
+  let value = (raw || "http://localhost:8080").trim().replace(/\/$/, "");
   if (!value) return "http://localhost:8080";
-  if (/^https?:\/\//i.test(value)) return value;
-  return `https://${value}`;
+
+  // Strip scheme for host normalization, then re-apply https (except localhost)
+  const hadScheme = /^https?:\/\//i.test(value);
+  let host = value.replace(/^https?:\/\//i, "");
+
+  // Render Blueprint "host" sometimes returns "wandr-api-xxxx" without .onrender.com
+  if (host && !host.includes(".") && !/^localhost(:\d+)?$/i.test(host) && !/^127\.0\.0\.1(:\d+)?$/.test(host)) {
+    host = `${host}.onrender.com`;
+  }
+
+  if (/^localhost(:\d+)?$/i.test(host) || /^127\.0\.0\.1(:\d+)?$/.test(host)) {
+    return `http://${host}`;
+  }
+  if (hadScheme && /^http:\/\//i.test(value) && !host.endsWith(".onrender.com")) {
+    return `http://${host}`;
+  }
+  return `https://${host}`;
 }
 
 const API_BASE = resolveApiBase(import.meta.env.VITE_API_URL);

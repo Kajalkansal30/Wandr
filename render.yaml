@@ -31,11 +31,9 @@ services:
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
+      # Full URL required — Render "host" alone can omit .onrender.com and break the build
       - key: VITE_API_URL
-        fromService:
-          name: wandr-api
-          type: web
-          property: host
+        value: https://wandr-api-d59o.onrender.com
       - key: NODE_VERSION
         value: "20"
     routes:
