@@ -1,0 +1,49 @@
+# Wandr on Render — Postgres + API (Docker) + static frontend
+# https://render.com/docs/blueprint-spec
+
+databases:
+  - name: wandr-db
+    plan: free
+    databaseName: wandr
+    user: wandr
+
+services:
+  - type: web
+    name: wandr-api
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wandr-db
+          property: connectionString
+      - key: WANDR_JWT_SECRET
+        generateValue: true
+      - key: JPA_DDL_AUTO
+        value: update
+      - key: WANDR_CORS_ORIGINS
+        value: http://localhost:*,http://127.0.0.1:*,https://*.onrender.com
+
+  - type: web
+    name: wandr-web
+    runtime: static
+    plan: free
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: wandr-api
+          type: web
+          property: host
+      - key: NODE_VERSION
+        value: "20"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

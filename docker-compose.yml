@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: wandr-postgres
+    environment:
+      POSTGRES_DB: wandr
+      POSTGRES_USER: wandr
+      POSTGRES_PASSWORD: wandr
+    ports:
+      - "5432:5432"
+    volumes:
+      - wandr_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wandr -d wandr"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  wandr_pgdata:

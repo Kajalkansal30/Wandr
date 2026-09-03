@@ -1,0 +1,16 @@
+package com.wandr.domain;
+
+public enum ModerationActionType {
+  APPROVE,
+  REJECT,
+  REQUEST_INFO,
+  SUSPEND,
+  CLOSE,
+  APPROVE_CLAIM,
+  REJECT_CLAIM,
+  REQUEST_CLAIM_INFO,
+  APPROVE_VERIFICATION,
+  REJECT_VERIFICATION,
+  APPROVE_MEDIA,
+  REJECT_MEDIA
+}

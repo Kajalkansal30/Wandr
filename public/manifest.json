@@ -1,0 +1,16 @@
+{
+  "name": "wandr — Out&About",
+  "short_name": "wandr",
+  "description": "Discover new, hidden, and underrated places near you",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDF6EE",
+  "theme_color": "#A66B3A",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

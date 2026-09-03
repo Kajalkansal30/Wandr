@@ -1,0 +1,570 @@
+import { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft, MapPin, Star, Heart, Clock, Phone, AtSign as InstagramIcon,
+  Wifi, Plug, Volume2, Car, PawPrint, Moon, Camera, Share2, Navigation, Flag,
+  CheckCircle,
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { usePlaces } from "../contexts/PlacesContext";
+import { fetchPlace, claimPlace, confirmPlaceInfo } from "../api/places";
+import Badge from "../components/Badge";
+import ReviewSection from "../components/ReviewSection";
+import MenuSection from "../components/MenuSection";
+import ReportModal from "../components/ReportModal";
+import { loadSavedIds, toggleSavedCafe } from "../utils/favorites";
+import { discoveryLabel, experienceTags, photoSpot, saveGrowthPct } from "../utils/discovery";
+import { trackEvent } from "../api/analytics";
+import { hoursAgoLabel, operatingLabel, addressLabel } from "../utils/placeStatus";
+
+const attrIcons = {
+  wifi: { icon: Wifi, format: (v) => (v === "fast" ? "Fast WiFi" : v === "basic" ? "Basic WiFi" : null) },
+  powerOutlets: { icon: Plug, format: (v) => (v ? "Power outlets" : null) },
+  noiseLevel: { icon: Volume2, format: (v) => (v ? `${v[0].toUpperCase() + v.slice(1)} noise` : null) },
+  parking: { icon: Car, format: (v) => (v && v !== "none" ? `${v[0].toUpperCase() + v.slice(1)} parking` : null) },
+  petFriendly: { icon: PawPrint, format: (v) => (v ? "Pet friendly" : null) },
+  lateNight: { icon: Moon, format: (v) => (v ? "Open late" : null) },
+  photoSpot: { icon: Camera, format: (v) => (v ? "Great for photos" : null) },
+};
+
+const TABS = ["Overview", "Menu", "Reviews", "Info"];
+
+export default function CafeDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { getById } = usePlaces();
+  const [cafe, setCafe] = useState(() => getById(id));
+  const [loadingCafe, setLoadingCafe] = useState(!getById(id));
+  const [saved, setSaved] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [activeTab, setActiveTab] = useState("Overview");
+  const [imgError, setImgError] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimPhone, setClaimPhone] = useState("");
+  const [claimEvidence, setClaimEvidence] = useState("");
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmMsg, setConfirmMsg] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const cached = getById(id);
+    if (cached) {
+      setCafe(cached);
+      setLoadingCafe(false);
+      return;
+    }
+    setLoadingCafe(true);
+    fetchPlace(id)
+      .then((p) => {
+        if (!cancelled) setCafe(p);
+      })
+      .catch(() => {
+        if (!cancelled) setCafe(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCafe(false);
+      });
+    return () => { cancelled = true; };
+  }, [id, getById]);
+
+  useEffect(() => {
+    if (!cafe) return;
+    trackEvent("place_view", { placeId: cafe.id, source: "detail" });
+  }, [cafe?.id]);
+
+  useEffect(() => {
+    if (!user || !cafe) return;
+    loadSavedIds(user).then((ids) => {
+      if (ids.includes(String(cafe.id))) setSaved(true);
+      else setSaved(false);
+    });
+  }, [user, cafe]);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [id]);
+
+  if (loadingCafe) {
+    return (
+      <div className="page-shell page-with-nav flex justify-center pt-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-warm-200 border-t-warm-500" />
+      </div>
+    );
+  }
+
+  if (!cafe) {
+    return (
+      <div className="page-shell page-with-nav pt-20 text-center">
+        <h2 className="text-xl font-bold text-warm-600">Cafe not found</h2>
+        <Link to="/" className="mt-2 inline-block text-sm text-warm-500 underline">Back to home</Link>
+      </div>
+    );
+  }
+
+  async function toggleSave() {
+    if (!user) { navigate("/login"); return; }
+    const prev = saved;
+    setSaved(!prev);
+    try {
+      await toggleSavedCafe(user, cafe.id, prev);
+    } catch {
+      setSaved(prev);
+    }
+  }
+
+  function handleShare() {
+    trackEvent("share_place", { placeId: cafe.id, source: "detail" });
+    if (navigator.share) {
+      navigator.share({ title: cafe.name, text: `Check out ${cafe.name} on wandr`, url: window.location.href });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+    }
+  }
+
+  function handleDirections() {
+    trackEvent("direction_click", { placeId: cafe.id, source: "detail" });
+    const url = cafe.lat && cafe.lng
+      ? `https://www.google.com/maps/dir/?api=1&destination=${cafe.lat},${cafe.lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cafe.name} ${cafe.address || ""}`)}`;
+    window.open(url, "_blank");
+  }
+
+  async function handleClaim() {
+    if (!user) { navigate(`/login?next=/cafe/${cafe.id}`); return; }
+    setClaimBusy(true);
+    try {
+      await claimPlace(cafe.id, { phone: claimPhone, evidence: claimEvidence });
+      trackEvent("claim_complete", { placeId: cafe.id, source: "detail" });
+      setClaimOpen(false);
+      alert("Claim submitted — an admin will review ownership.");
+      const refreshed = await fetchPlace(cafe.id);
+      setCafe(refreshed);
+    } catch (err) {
+      alert(err.message || "Could not submit claim");
+    } finally {
+      setClaimBusy(false);
+    }
+  }
+
+  async function handleConfirm(allYes) {
+    if (!user) { navigate(`/login?next=/cafe/${cafe.id}`); return; }
+    setConfirmBusy(true);
+    try {
+      const checks = { location: allYes, hours: allYes, price: allYes, menu: allYes };
+      const updated = await confirmPlaceInfo(cafe.id, checks);
+      setCafe(updated);
+      setConfirmMsg(allYes ? "Thanks — info marked as confirmed." : "Thanks — corrections queued for review.");
+    } catch (err) {
+      alert(err.message || "Could not confirm");
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
+  const priceLabel = "₹".repeat(cafe.priceLevel);
+  const label = discoveryLabel(cafe);
+  const vibes = experienceTags(cafe, 4);
+  const growth = saveGrowthPct(cafe);
+  const trustItems = cafe.verifiedDetails?.length ? cafe.verifiedDetails : [];
+  const freshness = hoursAgoLabel(cafe.lastInformationCheck);
+  const openInfo = operatingLabel(cafe);
+  const canClaim = cafe.ownershipStatus === "UNCLAIMED";
+  const toneClass =
+    openInfo?.tone === "good"
+      ? "text-sage-500"
+      : openInfo?.tone === "bad"
+        ? "text-terracotta-500"
+        : openInfo?.tone === "warn"
+          ? "text-gold-400"
+          : "text-warm-500";
+
+  return (
+    <div className="page-shell page-with-nav pt-4 md:pt-6">
+      <div className="relative overflow-hidden rounded-xl bg-warm-100 md:rounded-2xl">
+        {!imgError ? (
+          <img
+            src={cafe.image}
+            alt={cafe.name}
+            className="aspect-[16/10] h-auto w-full object-cover sm:aspect-[21/9]"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="flex aspect-[16/10] w-full items-center justify-center bg-warm-100 sm:aspect-[21/9]">
+            <span className="text-sm text-warm-400">{cafe.name}</span>
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
+
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="absolute top-3 left-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white sm:top-4 sm:left-4"
+        >
+          <ArrowLeft size={18} className="text-warm-700" />
+        </button>
+
+        <div className="absolute top-3 right-3 flex gap-2 sm:top-4 sm:right-4">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white"
+          >
+            <Share2 size={16} className="text-warm-600" />
+          </button>
+          <button
+            type="button"
+            onClick={toggleSave}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white"
+          >
+            <Heart size={16} className={saved ? "fill-terracotta-400 text-terracotta-400" : "text-warm-500"} />
+          </button>
+        </div>
+      </div>
+
+      {/* Decision-first viewport */}
+      <div className="mt-5 w-full md:mt-6">
+        {label && (
+          <span className="mb-2 inline-flex rounded-full bg-warm-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-warm-700">
+            {label.short}
+          </span>
+        )}
+        <h1
+          className="break-words text-2xl font-bold text-warm-700 md:text-3xl lg:text-4xl"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {cafe.name}
+        </h1>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-warm-500">
+          <span className="flex items-center gap-1 font-semibold text-warm-700">
+            <Star size={14} className="fill-gold-400 text-gold-400" />
+            {cafe.rating}
+            <span className="font-normal text-warm-400">· {cafe.reviewCount} reviews</span>
+          </span>
+          <span className="text-warm-200">·</span>
+          <span className="flex items-center gap-1">
+            <MapPin size={13} className="text-warm-300" /> {cafe.distance} km
+          </span>
+          <span className="text-warm-200">·</span>
+          <span>{priceLabel}</span>
+          {openInfo && (
+            <>
+              <span className="text-warm-200">·</span>
+              <span className={`font-medium ${toneClass}`}>{openInfo.label}</span>
+            </>
+          )}
+        </div>
+
+        {label?.kind === "rising" && growth > 0 && (
+          <p className="mt-3 text-sm font-semibold text-warm-700">🔥 Rising — +{growth}% saves this week</p>
+        )}
+
+        {vibes.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {vibes.map((t) => (
+              <span key={t} className="rounded-full bg-warm-50 px-3 py-1.5 text-xs font-medium text-warm-600">
+                {t}
+              </span>
+            ))}
+            {photoSpot(cafe) && !vibes.includes("Photo spot") && (
+              <span className="rounded-full bg-warm-50 px-3 py-1.5 text-xs font-medium text-warm-600">Photo spot</span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-5 rounded-xl border border-warm-100 bg-white p-4">
+          <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-warm-400">Trust & freshness</h3>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {trustItems.length === 0 ? (
+              <span className="text-sm text-warm-400">No verification signals yet</span>
+            ) : (
+              trustItems.map((detail) => (
+                <span key={detail} className="flex items-center gap-1.5 text-sm text-warm-600">
+                  <CheckCircle size={12} className="shrink-0 text-sage-500" />
+                  {detail}
+                </span>
+              ))
+            )}
+            {freshness && (
+              <span className="flex items-center gap-1.5 text-sm text-warm-500">
+                <Clock size={12} className="shrink-0 text-warm-300" />
+                {freshness}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {canClaim && (
+          <div className="mt-4 rounded-xl border border-dashed border-warm-200 bg-warm-50 p-4">
+            <p className="text-sm font-semibold text-warm-700">Owner hasn&apos;t claimed this place</p>
+            <p className="mt-1 text-xs text-warm-400">Are you the owner or manager?</p>
+            {!claimOpen ? (
+              <button
+                type="button"
+                onClick={() => {
+                  trackEvent("claim_start", { placeId: cafe.id, source: "detail" });
+                  setClaimOpen(true);
+                }}
+                className="mt-3 rounded-xl bg-warm-700 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Claim this business
+              </button>
+            ) : (
+              <div className="mt-3 space-y-2">
+                <input
+                  value={claimPhone}
+                  onChange={(e) => setClaimPhone(e.target.value)}
+                  placeholder="Business phone"
+                  className="w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-sm"
+                />
+                <textarea
+                  value={claimEvidence}
+                  onChange={(e) => setClaimEvidence(e.target.value)}
+                  placeholder="Brief evidence (Instagram, docs, etc.)"
+                  rows={2}
+                  className="w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  disabled={claimBusy}
+                  onClick={handleClaim}
+                  className="rounded-xl bg-warm-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {claimBusy ? "Submitting…" : "Submit claim"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 rounded-xl border border-warm-100 bg-white p-4">
+          <h3 className="mb-2 text-sm font-semibold text-warm-700">Is this still correct?</h3>
+          <p className="mb-3 text-xs text-warm-400">Location · Hours · Price · Menu</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={confirmBusy}
+              onClick={() => handleConfirm(true)}
+              className="rounded-full bg-sage-100 px-4 py-2 text-xs font-semibold text-sage-500"
+            >
+              ✓ Yes, looks right
+            </button>
+            <button
+              type="button"
+              disabled={confirmBusy}
+              onClick={() => handleConfirm(false)}
+              className="rounded-full bg-warm-100 px-4 py-2 text-xs font-semibold text-warm-600"
+            >
+              ✕ Something&apos;s off
+            </button>
+          </div>
+          {confirmMsg && <p className="mt-2 text-xs text-warm-500">{confirmMsg}</p>}
+        </div>
+
+        <p className="mt-3 text-sm text-warm-400">{addressLabel(cafe)}</p>
+
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleDirections}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-warm-700"
+          >
+            <Navigation size={16} /> Go there
+          </button>
+          <button
+            type="button"
+            onClick={toggleSave}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 font-semibold text-warm-600 transition hover:bg-warm-50"
+          >
+            <Heart size={16} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
+            {saved ? "Saved" : "Save"}
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs — spaced, scrollable on narrow screens */}
+      <div className="sticky top-0 z-20 mt-6 border-b border-warm-100 bg-cream">
+        <div className="scrollbar-none flex gap-1 overflow-x-auto">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab);
+                if (tab === "Menu") trackEvent("menu_view", { placeId: cafe.id, source: "detail" });
+              }}
+              className={`relative shrink-0 px-4 py-3 text-sm font-semibold transition-colors ${
+                activeTab === tab ? "text-warm-700" : "text-warm-400 hover:text-warm-600"
+              }`}
+            >
+              {tab}
+              {activeTab === tab && (
+                <span className="absolute right-3 bottom-0 left-3 h-0.5 rounded-full bg-warm-600" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 w-full space-y-6 animate-fade-in" key={activeTab}>
+        {activeTab === "Overview" && (
+          <>
+            {cafe.description && (
+              <p className="text-base leading-relaxed text-warm-600">{cafe.description}</p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {cafe.tags.map((tag) => (
+                <Badge key={tag} label={tag} />
+              ))}
+            </div>
+
+            {cafe.bestFor?.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-warm-500">Best for</h3>
+                <div className="flex flex-wrap gap-2">
+                  {cafe.bestFor.map((b) => (
+                    <span
+                      key={b}
+                      className="rounded-full border border-warm-100 bg-warm-50 px-3 py-1.5 text-sm font-medium text-warm-600"
+                    >
+                      {b}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h3 className="mb-3 text-sm font-semibold text-warm-500">Experience</h3>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(attrIcons).map(([key, { icon: Icon, format }]) => {
+                  const val = key === "photoSpot" ? photoSpot(cafe) : cafe[key];
+                  const labelText = format(val);
+                  if (!labelText) return null;
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center gap-2.5 rounded-xl border border-warm-100 bg-white px-3 py-2.5 text-sm text-warm-600"
+                    >
+                      <Icon size={15} className="shrink-0 text-warm-400" />
+                      <span>{labelText}</span>
+                    </div>
+                  );
+                })}
+                {cafe.seating?.length > 0 && (
+                  <div className="flex items-center gap-2.5 rounded-xl border border-warm-100 bg-white px-3 py-2.5 text-sm text-warm-600 sm:col-span-2 lg:col-span-3">
+                    <span className="text-warm-400">Seating:</span>
+                    <span>{cafe.seating.join(", ")}</span>
+                  </div>
+                )}
+                {cafe.avgCostForTwo && (
+                  <div className="flex items-center gap-2.5 rounded-xl border border-warm-100 bg-white px-3 py-2.5 text-sm text-warm-600 sm:col-span-2 lg:col-span-3">
+                    <span className="text-warm-400">Avg for two:</span>
+                    <span className="font-bold text-warm-700">₹{cafe.avgCostForTwo}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {cafe.savedCount > 0 && (
+              <div className="flex items-center gap-2">
+                <Heart size={13} className="text-terracotta-300" />
+                <span className="text-sm text-warm-400">{cafe.savedCount} people saved this cafe</span>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === "Menu" && <MenuSection menu={cafe.menu} />}
+
+        {activeTab === "Reviews" && <ReviewSection cafeId={String(cafe.id)} />}
+
+        {activeTab === "Info" && (
+          <div className="space-y-5">
+            <div>
+              <h3 className="mb-3 text-sm font-semibold text-warm-500">Amenities</h3>
+              <div className="flex flex-wrap gap-2">
+                {cafe.wifi && (
+                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">WiFi</span>
+                )}
+                {cafe.powerOutlets && (
+                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Charging</span>
+                )}
+                {cafe.petFriendly && (
+                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Pet Friendly</span>
+                )}
+                {cafe.parking && cafe.parking !== "none" && (
+                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Parking</span>
+                )}
+                {cafe.seating?.includes("Outdoor") && (
+                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Outdoor Seating</span>
+                )}
+                {cafe.seating?.includes("Garden") && (
+                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Garden</span>
+                )}
+                {cafe.seating?.includes("Rooftop") && (
+                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Rooftop</span>
+                )}
+                {cafe.lateNight && (
+                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Open Late</span>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-warm-100 bg-white p-5">
+              {cafe.hours && (
+                <div className="flex items-center gap-3 text-sm text-warm-600">
+                  <Clock size={16} className="shrink-0 text-warm-400" />
+                  <span>{cafe.hours}</span>
+                </div>
+              )}
+              {cafe.phone && (
+                <a
+                  href={`tel:${cafe.phone}`}
+                  onClick={() => trackEvent("call_click", { placeId: cafe.id, source: "detail" })}
+                  className="flex items-center gap-3 text-sm text-warm-600"
+                >
+                  <Phone size={16} className="shrink-0 text-warm-400" />
+                  <span>{cafe.phone}</span>
+                </a>
+              )}
+              {cafe.instagram && (
+                <div className="flex items-center gap-3 text-sm text-warm-600">
+                  <InstagramIcon size={16} className="shrink-0 text-warm-400" />
+                  <span>{cafe.instagram}</span>
+                </div>
+              )}
+              {cafe.address && (
+                <div className="flex items-start gap-3 text-sm text-warm-600">
+                  <MapPin size={16} className="mt-0.5 shrink-0 text-warm-400" />
+                  <span>{cafe.address}{cafe.city && `, ${cafe.city}`}</span>
+                </div>
+              )}
+            </div>
+
+            {user && (
+              <button
+                type="button"
+                onClick={() => setShowReport(true)}
+                className="flex items-center gap-1.5 text-sm text-warm-400 transition hover:text-warm-600"
+              >
+                <Flag size={14} /> Report this place
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {showReport && (
+        <ReportModal
+          cafeId={String(cafe.id)}
+          cafeName={cafe.name}
+          onClose={() => setShowReport(false)}
+        />
+      )}
+    </div>
+  );
+}
