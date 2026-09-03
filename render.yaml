@@ -1,11 +1,6 @@
-# Wandr on Render — Postgres + API (Docker) + static frontend
+# Wandr on Render — API (Docker) + static frontend
+# Database: Neon Postgres (set DATABASE_URL in the dashboard)
 # https://render.com/docs/blueprint-spec
-
-databases:
-  - name: wandr-db
-    plan: free
-    databaseName: wandr
-    user: wandr
 
 services:
   - type: web
@@ -17,10 +12,10 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
     envVars:
+      # Paste Neon connection string in Render dashboard after create
+      # Prefer Neon's "direct" host (ep-....neon.tech), not the -pooler host, for Spring/JPA
       - key: DATABASE_URL
-        fromDatabase:
-          name: wandr-db
-          property: connectionString
+        sync: false
       - key: WANDR_JWT_SECRET
         generateValue: true
       - key: JPA_DDL_AUTO
