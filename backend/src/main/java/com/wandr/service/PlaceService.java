@@ -26,7 +26,7 @@ public class PlaceService {
   @Transactional(readOnly = true)
   public List<PlaceDtos.PlaceResponse> listApproved(Double lat, Double lng) {
     var activeBoosts = boostService.activeByPlaceId();
-    return placeRepository.findByStatusOrderByCreatedAtDesc(PlaceStatus.APPROVED).stream()
+    return placeRepository.findByStatusWithOwner(PlaceStatus.APPROVED).stream()
         .filter(p -> p.getOperatingStatus() != OperatingStatus.PERMANENTLY_CLOSED)
         .map(p -> boostService.enrich(p, distanceKm(lat, lng, p.getLat(), p.getLng()), activeBoosts))
         .sorted(Comparator.comparing(r -> r.distance() == null ? Double.MAX_VALUE : r.distance()))
@@ -35,7 +35,7 @@ public class PlaceService {
 
   @Transactional(readOnly = true)
   public PlaceDtos.PlaceResponse getApproved(Long id, Double lat, Double lng) {
-    Place place = placeRepository.findById(id)
+    Place place = placeRepository.findByIdWithOwner(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
     if (place.getStatus() != PlaceStatus.APPROVED) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found");
@@ -79,7 +79,7 @@ public class PlaceService {
 
   @Transactional(readOnly = true)
   public List<PlaceDtos.PlaceResponse> listByOwner(User owner) {
-    return placeRepository.findByOwnerIdOrderByCreatedAtDesc(owner.getId()).stream()
+    return placeRepository.findByOwnerIdWithOwner(owner.getId()).stream()
         .map(p -> PlaceDtos.PlaceResponse.from(p, null))
         .toList();
   }

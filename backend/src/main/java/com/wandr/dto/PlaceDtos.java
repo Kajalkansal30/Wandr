@@ -167,13 +167,25 @@ public class PlaceDtos {
           p.getOpeningDate(),
           p.getNeedsInfoReasons(),
           p.getAdminNote(),
-          p.getOwner() != null ? p.getOwner().getDisplayName() : null,
+          ownerDisplayName(p),
           distanceKm,
           sponsored,
           sponsoredHeadline,
           boostCampaignId,
           boostEndsAt
       );
+    }
+
+    /** Avoid LazyInitializationException when open-in-view is false and owner wasn't fetched. */
+    private static String ownerDisplayName(Place p) {
+      try {
+        var owner = p.getOwner();
+        if (owner == null) return null;
+        if (!org.hibernate.Hibernate.isInitialized(owner)) return null;
+        return owner.getDisplayName();
+      } catch (Exception ignored) {
+        return null;
+      }
     }
 
     private static List<String> trustDetails(Place p, boolean ownerVerified) {

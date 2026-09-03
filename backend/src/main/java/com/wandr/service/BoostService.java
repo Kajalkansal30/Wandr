@@ -113,9 +113,8 @@ public class BoostService {
     );
   }
 
-  /** Active campaigns for public discovery enrichment. */
+  /** Active campaigns for public discovery enrichment. Does not mutate rows (safe in read-only tx). */
   public Map<Long, BoostCampaign> activeByPlaceId() {
-    expireStale();
     Map<Long, BoostCampaign> map = new LinkedHashMap<>();
     for (BoostCampaign c : boostCampaignRepository.findActive(BoostStatus.ACTIVE, Instant.now())) {
       map.putIfAbsent(c.getPlaceId(), c);
