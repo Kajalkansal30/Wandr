@@ -150,7 +150,7 @@ export default function LoginPage() {
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-warm-400">Requires backend at localhost:8080 · password wandr123</p>
+              <p className="mt-2 text-[11px] text-warm-400">Demo accounts · password wandr123</p>
             </div>
           )}
 
