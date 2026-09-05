@@ -19,7 +19,7 @@ export default function Header() {
             <img
               src="/logo.png"
               alt="Wandr"
-              className="h-9 w-auto object-contain md:h-10"
+              className="h-10 w-auto object-contain md:h-11"
             />
           </Link>
 

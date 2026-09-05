@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { MapIcon, List, MapPin, ArrowRight, Search, X } from "lucide-react";
+import { MapIcon, List, MapPin, ArrowRight, Search, X, Sparkles, TrendingUp, Heart } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
 import SearchBar from "../components/SearchBar";
@@ -28,13 +28,40 @@ import {
 import { trackEvent } from "../api/analytics";
 import { injectSponsoredSlot } from "../utils/sponsored";
 
-const VIBES = [
-  { id: "date", label: "Date Night", image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400&q=80" },
-  { id: "study", label: "Quiet & Study", image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&q=80" },
-  { id: "work", label: "Work", image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&q=80" },
-  { id: "outdoor", label: "Outdoor", image: "https://images.unsplash.com/photo-1442512595331-e89e7384260c?w=400&q=80" },
-  { id: "late-night", label: "Late Night", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&q=80" },
-  { id: "photo", label: "Photo Spots", image: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=400&q=80" },
+const HERO_PHOTO =
+  "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&q=80";
+
+const MOODS = [
+  {
+    id: "coffee",
+    label: "Slow morning",
+    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80",
+  },
+  {
+    id: "date",
+    label: "Date night",
+    image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400&q=80",
+  },
+  {
+    id: "work",
+    label: "Work somewhere nice",
+    image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&q=80",
+  },
+  {
+    id: "late-night",
+    label: "Late-night bites",
+    image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&q=80",
+  },
+  {
+    id: "outdoor",
+    label: "Sit outside",
+    image: "https://images.unsplash.com/photo-1442512595331-e89e7384260c?w=400&q=80",
+  },
+  {
+    id: "desserts",
+    label: "Sweet craving",
+    image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&q=80",
+  },
 ];
 
 export default function HomePage() {
@@ -48,6 +75,7 @@ export default function HomePage() {
   const { places: allPlaces, loading: placesLoading } = usePlaces();
   const [savedIds, setSavedIds] = useState([]);
   const [tastePrefs, setTastePrefs] = useState(() => loadTastePrefs());
+  const [signalIndex, setSignalIndex] = useState(0);
   const newSectionRef = useRef(null);
 
   useEffect(() => {
@@ -123,6 +151,36 @@ export default function HomePage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  const newNearbyCount = news.length || Math.min(cafes.length, 12);
+  const spottedWeekCount = useMemo(
+    () => cafes.reduce((sum, c) => sum + (c.savesThisWeek || 0), 0) || Math.max(rising.length * 3, 8),
+    [cafes, rising.length]
+  );
+  const savedNearbyCount = useMemo(
+    () => cafes.reduce((sum, c) => sum + (c.savedCount || 0), 0) || Math.max(cafes.length * 2, 6),
+    [cafes]
+  );
+
+  const discoverySignals = useMemo(
+    () =>
+      [
+        newNearbyCount > 0
+          ? { key: "new", icon: Sparkles, label: `${newNearbyCount} new places nearby` }
+          : null,
+        { key: "spotted", icon: TrendingUp, label: `${spottedWeekCount} people spotted this week` },
+        { key: "saved", icon: Heart, label: `${savedNearbyCount} saved nearby` },
+      ].filter(Boolean),
+    [newNearbyCount, spottedWeekCount, savedNearbyCount]
+  );
+
+  useEffect(() => {
+    if (discoverySignals.length < 2) return undefined;
+    const id = setInterval(() => {
+      setSignalIndex((i) => (i + 1) % discoverySignals.length);
+    }, 4200);
+    return () => clearInterval(id);
+  }, [discoverySignals.length]);
+
   if (placesLoading && allPlaces.length === 0) {
     return (
       <main className="page-shell page-with-nav flex justify-center pt-20">
@@ -132,72 +190,130 @@ export default function HomePage() {
   }
 
   const showHero = !isFiltered && viewMode === "list";
+  const areaLabel = areaDisplayLabel(area);
+  const heroPlace = news[0] || rising[0] || cafes[0];
+  const spottedPlaces = (news.length ? news : rising.length ? rising : cafes).slice(0, 4);
+  const activeSignal = discoverySignals[signalIndex % Math.max(discoverySignals.length, 1)];
+  const SignalIcon = activeSignal?.icon || Sparkles;
 
   return (
     <>
       <main className="discover-canvas page-with-nav">
         {showHero && (
           <section className="discover-hero" aria-label="Discover">
-            <div
-              className="discover-hero__media"
-              style={{
-                backgroundImage:
-                  "url(https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1920&q=80)",
-              }}
+            <svg
+              className="discover-hero__path"
+              viewBox="0 0 1200 640"
+              fill="none"
               aria-hidden
-            />
-            <div className="discover-hero__veil" aria-hidden />
-            <div className="page-shell discover-hero__content">
-              <div className="discover-hero__reveal discover-hero__reveal--1 mb-4 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAreaOpen(true)}
-                  className="discover-hero__chip inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-warm-700 transition hover:bg-white/90"
-                >
-                  <MapPin size={14} className="text-terracotta-400" />
-                  {areaDisplayLabel(area)}
-                </button>
-                <Link
-                  to={`/whats-new/${encodeURIComponent(area.city || area.label || "Delhi")}`}
-                  className="text-xs font-semibold text-warm-600 underline-offset-2 hover:underline"
-                >
-                  What&apos;s new here?
-                </Link>
-              </div>
+              preserveAspectRatio="xMidYMid slice"
+            >
+              <path
+                d="M80 520 C 220 420, 280 360, 380 300 S 560 220, 680 250 S 880 360, 1040 180"
+                stroke="#2B211D"
+                strokeWidth="1.5"
+                strokeDasharray="3 10"
+                strokeLinecap="round"
+              />
+              <circle cx="380" cy="300" r="3.5" fill="#EF6F61" opacity="0.35" />
+              <circle cx="680" cy="250" r="3" fill="#F4C95D" opacity="0.4" />
+              <circle cx="1040" cy="180" r="4" fill="#A9B79C" opacity="0.35" />
+            </svg>
 
-              <div className="discover-hero__reveal discover-hero__reveal--2 mb-5 w-full max-w-3xl">
-                <h1
-                  className="text-[1.75rem] font-bold leading-tight tracking-tight text-warm-700 sm:text-4xl md:text-5xl"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  Find somewhere worth discovering.
-                </h1>
-                <p className="mt-2 text-sm leading-relaxed text-warm-500 sm:mt-3 sm:text-base md:text-lg">
-                  New cafés, hidden gems, street food and local spots before everyone else finds them.
-                </p>
-              </div>
+            <div className="page-shell">
+              <div className="discover-hero__grid">
+                <div className="discover-hero__copy">
+                  <div className="discover-hero__reveal discover-hero__reveal--1 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAreaOpen(true)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-warm-200 bg-white px-3 py-1.5 text-sm font-medium text-warm-700 transition hover:border-warm-400"
+                    >
+                      <MapPin size={14} className="text-[#EF6F61]" />
+                      {areaLabel}
+                    </button>
+                  </div>
 
-              <div className="discover-hero__reveal discover-hero__reveal--3 mb-4 w-full max-w-3xl">
-                <SearchBar
-                  value={search}
-                  onChange={(v) => {
-                    setSearch(v);
-                    if (v) setCategory(null);
-                  }}
-                  onShortcutCategory={(id) => {
-                    setCategory(id);
-                    setSearch("");
-                  }}
-                />
-              </div>
+                  <p className="discover-hero__eyebrow discover-hero__reveal discover-hero__reveal--1">
+                    What&apos;s worth discovering?
+                  </p>
 
-              <button
-                type="button"
-                onClick={() => newSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
-                className="discover-hero__reveal discover-hero__reveal--4 inline-flex items-center gap-2 text-sm font-semibold text-terracotta-500 transition hover:text-terracotta-400"
-              >
-                Explore nearby <ArrowRight size={14} />
-              </button>
+                  <h1
+                    className="discover-hero__title discover-hero__reveal discover-hero__reveal--2"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    Find somewhere
+                    <br />
+                    <em>worth discovering.</em>
+                  </h1>
+
+                  <p className="discover-hero__reveal discover-hero__reveal--2 mt-3 max-w-md text-sm leading-relaxed text-warm-400 sm:text-base">
+                    Find new cafés, hidden gems &amp; local spots worth wandering for.
+                  </p>
+
+                  <div className="discover-hero__search discover-hero__reveal discover-hero__reveal--3">
+                    <SearchBar
+                      compact
+                      value={search}
+                      onChange={(v) => {
+                        setSearch(v);
+                        if (v) setCategory(null);
+                      }}
+                      onShortcutCategory={(id) => {
+                        setCategory(id);
+                        setSearch("");
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => newSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
+                    className="discover-hero__reveal discover-hero__reveal--4 mt-4 inline-flex items-center gap-2 text-sm font-semibold text-warm-700 transition hover:text-[#EF6F61]"
+                  >
+                    Explore nearby <ArrowRight size={14} />
+                  </button>
+                </div>
+
+                <div className="discover-hero__visual discover-hero__reveal discover-hero__reveal--3">
+                  <img
+                    src={heroPlace?.image || HERO_PHOTO}
+                    alt=""
+                    className="discover-hero__photo"
+                  />
+                  {activeSignal && (
+                    <div className="discover-hero__stat" key={activeSignal.key}>
+                      <SignalIcon size={12} className="text-[#EF6F61]" />
+                      {activeSignal.label}
+                    </div>
+                  )}
+                  {heroPlace && (
+                    <Link
+                      to={`/cafe/${heroPlace.id}`}
+                      className="discover-hero__place-card block transition hover:-translate-y-0.5"
+                    >
+                      <p
+                        className="truncate text-sm font-bold text-warm-700"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      >
+                        {heroPlace.name}
+                      </p>
+                      <p className="mt-0.5 text-xs font-semibold text-[#EF6F61]">
+                        {heroPlace.badge === "new" || heroPlace.openedDaysAgo != null
+                          ? "✦ New"
+                          : heroPlace.badge === "rising"
+                            ? "↗ Rising"
+                            : "◇ Spot"}
+                        {heroPlace.distance != null ? ` · ${heroPlace.distance} km` : ""}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-warm-400">
+                        {(heroPlace.bestFor || heroPlace.tags || []).slice(0, 3).join(" · ") ||
+                          heroPlace.category}
+                      </p>
+                    </Link>
+                  )}
+                </div>
+              </div>
             </div>
           </section>
         )}
@@ -213,6 +329,7 @@ export default function HomePage() {
             </h2>
             <div className="mt-4 max-w-2xl">
               <SearchBar
+                compact
                 value={search}
                 onChange={(v) => {
                   setSearch(v);
@@ -251,7 +368,7 @@ export default function HomePage() {
             onClick={() => setViewMode(viewMode === "list" ? "map" : "list")}
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
               viewMode === "map"
-                ? "bg-warm-600 text-white shadow-md"
+                ? "bg-[#EF6F61] text-white shadow-md"
                 : "border border-warm-200 bg-white text-warm-500 hover:border-warm-400"
             }`}
           >
@@ -265,7 +382,7 @@ export default function HomePage() {
               <MapView cafes={displayList} />
             </div>
             <div className="hidden max-h-[70vh] space-y-4 overflow-y-auto pr-2 lg:col-span-2 lg:block">
-              <p className="text-sm font-semibold text-warm-600">Explore this area · {displayList.length} places</p>
+              <p className="text-sm font-semibold text-warm-700">Explore this area · {displayList.length} places</p>
               {displayList.map((cafe, i) => (
                 <CafeCard key={cafe.id} cafe={cafe} index={i} />
               ))}
@@ -277,7 +394,7 @@ export default function HomePage() {
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warm-100">
                 <Search size={28} className="text-warm-300" />
               </div>
-              <p className="mb-1 text-lg font-semibold text-warm-600">Nothing to discover yet</p>
+              <p className="mb-1 text-lg font-semibold text-warm-700">Nothing to discover yet</p>
               <p className="mb-6 text-sm text-warm-400">Try another vibe — or explore hidden gems</p>
               <button
                 type="button"
@@ -285,7 +402,7 @@ export default function HomePage() {
                   setSearch("");
                   setCategory("hidden-gem");
                 }}
-                className="text-sm font-semibold text-warm-600 underline"
+                className="text-sm font-semibold text-[#EF6F61] underline"
               >
                 Explore hidden gems →
               </button>
@@ -299,6 +416,60 @@ export default function HomePage() {
           )
         ) : (
           <div>
+            {spottedPlaces.length > 0 && (
+              <section className="section-gap">
+                <div className="mb-4 flex items-end justify-between gap-3">
+                  <div>
+                    <h2
+                      className="text-lg font-bold text-warm-700 md:text-xl"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      Spotted around {areaLabel}
+                    </h2>
+                    <p className="mt-1 text-sm text-warm-400">Places people are discovering right now.</p>
+                  </div>
+                  <Link
+                    to="/spotted"
+                    className="shrink-0 text-sm font-semibold text-[#EF6F61] hover:underline"
+                  >
+                    See all →
+                  </Link>
+                </div>
+                <div className="spotted-rail">
+                  {spottedPlaces.map((cafe, i) => (
+                    <CafeCard key={cafe.id} cafe={cafe} index={i} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="section-gap">
+              <h2
+                className="mb-2 text-lg font-bold text-warm-700 md:text-xl"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Wander by mood
+              </h2>
+              <p className="mb-4 text-sm text-warm-400">What kind of experience are you after?</p>
+              <div className="mood-rail">
+                {MOODS.map((mood) => (
+                  <button
+                    key={mood.id}
+                    type="button"
+                    className="mood-chip"
+                    onClick={() => {
+                      setCategory(mood.id);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    <img src={mood.image} alt="" />
+                    <span className="mood-chip__veil" />
+                    <span className="mood-chip__label">{mood.label}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
             <div ref={newSectionRef}>
               <DiscoverySection
                 title="New around you"
@@ -310,11 +481,11 @@ export default function HomePage() {
               >
                 {news.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-warm-200 bg-white px-6 py-10 text-center">
-                    <p className="font-semibold text-warm-600">No new places nearby yet</p>
+                    <p className="font-semibold text-warm-700">No new places nearby yet</p>
                     <button
                       type="button"
                       onClick={() => setCategory("hidden-gem")}
-                      className="mt-3 text-sm font-semibold text-terracotta-500 hover:underline"
+                      className="mt-3 text-sm font-semibold text-[#EF6F61] hover:underline"
                     >
                       Explore hidden gems →
                     </button>
@@ -355,38 +526,6 @@ export default function HomePage() {
                 </div>
               </DiscoverySection>
             )}
-
-            <section className="section-gap">
-              <h2
-                className="mb-5 text-lg font-bold text-warm-700 md:text-xl"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Explore by vibe
-              </h2>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {VIBES.map((vibe) => (
-                  <button
-                    key={vibe.id}
-                    type="button"
-                    onClick={() => {
-                      setCategory(vibe.id);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    className="group relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl"
-                  >
-                    <img
-                      src={vibe.image}
-                      alt={vibe.label}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <span className="text-xs font-semibold leading-tight text-white">{vibe.label}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
 
             <section className="section-gap">
               <div
@@ -448,8 +587,8 @@ export default function HomePage() {
                         }}
                         className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                           on
-                            ? "bg-warm-600 text-white"
-                            : "border border-warm-200 bg-white text-warm-600 hover:border-warm-400"
+                            ? "bg-warm-700 text-cream"
+                            : "border border-warm-200 bg-white text-warm-700 hover:border-warm-400"
                         }`}
                       >
                         {pref.label}

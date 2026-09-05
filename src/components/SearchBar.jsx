@@ -11,8 +11,9 @@ const SHORTCUTS = [
 export default function SearchBar({
   value,
   onChange,
-  placeholder = "Try 'quiet café for a date' or 'new places near me'",
+  placeholder = 'Try "quiet café for a date" or "new places nearby"',
   onShortcutCategory,
+  compact = false,
 }) {
   const [focused, setFocused] = useState(false);
   const [recent, setRecent] = useState([]);
@@ -46,7 +47,7 @@ export default function SearchBar({
   const showDropdown = focused && !value;
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div ref={wrapRef} className={`relative ${compact ? "max-w-[46rem]" : ""}`}>
       <Search
         size={18}
         className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-warm-300"
@@ -57,9 +58,9 @@ export default function SearchBar({
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-warm-100 bg-white py-3 pl-11 pr-10 text-sm text-warm-700 shadow-sm transition-all placeholder:text-warm-300 focus:border-warm-200 focus:outline-none focus:ring-2 focus:ring-warm-300/50"
+        className="w-full rounded-2xl border border-warm-100 bg-white py-3.5 pl-11 pr-11 text-sm text-warm-700 shadow-sm transition-all placeholder:text-warm-300 focus:border-warm-200 focus:outline-none focus:ring-2 focus:ring-[#EF6F61]/25"
       />
-      {value && (
+      {value ? (
         <button
           type="button"
           onClick={() => onChange("")}
@@ -67,6 +68,11 @@ export default function SearchBar({
         >
           <X size={12} className="text-warm-500" />
         </button>
+      ) : (
+        <Sparkles
+          size={15}
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#EF6F61]/70"
+        />
       )}
 
       {showDropdown && (
