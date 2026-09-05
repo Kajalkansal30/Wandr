@@ -2,9 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
-import { Heart, MapPin, Star, Award, Compass, ArrowRight, ArrowLeft, Store, Shield } from "lucide-react";
+import { Heart, MapPin, Star, Award, Compass, ArrowRight, ArrowLeft, Store, Shield, Sparkles, Gem, TrendingUp, Binoculars } from "lucide-react";
 import { loadSavedIds } from "../utils/favorites";
 import { computeBadges } from "../utils/badges";
+
+const BADGE_ICONS = {
+  early: Sparkles,
+  scout: Binoculars,
+  gem: Gem,
+  trend: TrendingUp,
+};
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -36,7 +43,7 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={() => navigate("/login")}
-          className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-warm-700"
+          className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-terracotta-500"
         >
           Sign In <ArrowRight size={16} />
         </button>
@@ -98,18 +105,21 @@ export default function ProfilePage() {
           </p>
         ) : (
           <div className="space-y-3">
-            {badges.map((badge) => (
-              <div key={badge.id} className="flex items-center gap-4 rounded-xl border border-warm-100 bg-white p-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-warm-50 text-xl">
-                  {badge.icon}
+            {badges.map((badge) => {
+              const Icon = BADGE_ICONS[badge.icon] || Award;
+              return (
+              <div key={badge.id} className="flex items-center gap-4 border-b border-warm-100 py-4 last:border-0">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-warm-50 text-warm-600">
+                  <Icon size={20} />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-warm-700">{badge.title}</p>
                   <p className="mt-0.5 text-xs text-warm-400">{badge.desc}</p>
                 </div>
-                <Award size={16} className="ml-auto text-gold-400" />
+                <Award size={16} className="ml-auto text-gold-300" />
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

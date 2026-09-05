@@ -15,6 +15,8 @@ import SubmitPlacePage from "./pages/SubmitPlacePage";
 import MapExplorePage from "./pages/MapExplorePage";
 import { CuratedListsIndex, CuratedListPage } from "./pages/CuratedListsPage";
 import WhatsNewPage from "./pages/WhatsNewPage";
+import SpottedPage from "./pages/SpottedPage";
+import CreateSpotPage from "./pages/CreateSpotPage";
 import DashboardPage from "./pages/owner/DashboardPage";
 import RegisterCafePage from "./pages/owner/RegisterCafePage";
 import EditCafePage from "./pages/owner/EditCafePage";
@@ -47,6 +49,15 @@ export default function App() {
               <Route path="lists/:listId" element={<CuratedListPage />} />
               <Route path="collections" element={<Navigate to="/lists" replace />} />
               <Route path="whats-new/:area" element={<WhatsNewPage />} />
+              <Route path="spotted" element={<SpottedPage />} />
+              <Route
+                path="spotted/create"
+                element={
+                  <ProtectedRoute allowedRoles={["user", "owner", "admin"]}>
+                    <CreateSpotPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="submit" element={<SubmitPlacePage />} />
 

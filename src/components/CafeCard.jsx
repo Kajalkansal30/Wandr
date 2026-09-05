@@ -8,11 +8,11 @@ import { trackEvent } from "../api/analytics";
 import { operatingLabel } from "../utils/placeStatus";
 
 const KIND_STYLE = {
-  new: { icon: Sparkles, classes: "bg-terracotta-500 text-white" },
-  rising: { icon: TrendingUp, classes: "bg-warm-700 text-white" },
-  hidden: { icon: Leaf, classes: "bg-sage-500 text-white" },
-  early: { icon: Sparkles, classes: "bg-gold-400 text-white" },
-  sponsored: { icon: Megaphone, classes: "bg-warm-800 text-white" },
+  new: { icon: Sparkles, classes: "wandr-new-accent" },
+  rising: { icon: TrendingUp, classes: "bg-warm-700 text-cream" },
+  hidden: { icon: Leaf, classes: "bg-sage-300 text-warm-800" },
+  early: { icon: Sparkles, classes: "bg-gold-300 text-warm-800" },
+  sponsored: { icon: Megaphone, classes: "bg-warm-800 text-cream" },
 };
 
 export default function CafeCard({ cafe, index = 0, featured = false }) {
@@ -172,7 +172,7 @@ export default function CafeCard({ cafe, index = 0, featured = false }) {
           <div className="mt-3 flex items-start justify-between gap-2 border-t border-warm-50 pt-3">
             <div>
               <p className="text-sm font-semibold text-warm-700">
-                {label.kind === "rising" && growth > 0 ? `🔥 +${growth}% saves this week` : label.title}
+                {label.kind === "rising" && growth > 0 ? `Rising · +${growth}% saves this week` : label.title}
               </p>
               {label.kind === "rising" && (
                 <p className="mt-0.5 text-xs text-warm-400">People are starting to discover this.</p>

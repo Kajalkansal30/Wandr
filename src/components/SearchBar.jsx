@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, X, Clock, Sparkles, Flame, Leaf } from "lucide-react";
+import { Search, X, Clock, Sparkles, TrendingUp, Leaf } from "lucide-react";
 import { SEARCH_SUGGESTIONS } from "../utils/searchParser";
 
 const SHORTCUTS = [
   { id: "new", label: "New around me", icon: Sparkles, query: "new cafés near me" },
-  { id: "rising", label: "Rising nearby", icon: Flame, query: "rising places near me" },
+  { id: "rising", label: "Rising nearby", icon: TrendingUp, query: "rising places near me" },
   { id: "hidden", label: "Hidden gems nearby", icon: Leaf, query: "hidden gems near me" },
 ];
 

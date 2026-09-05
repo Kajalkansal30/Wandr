@@ -118,7 +118,7 @@ export default function BoostPage() {
           </div>
           <Link
             to="/owner/dashboard?tab=promote"
-            className="mt-8 inline-flex rounded-xl bg-warm-600 px-6 py-3 text-sm font-semibold text-white hover:bg-warm-700"
+            className="mt-8 inline-flex rounded-xl bg-warm-600 px-6 py-3 text-sm font-semibold text-white hover:bg-terracotta-500"
           >
             Back to Business Hub
           </Link>

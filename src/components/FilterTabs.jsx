@@ -1,9 +1,9 @@
-import { Sparkles, Leaf, Flame, MapPin } from "lucide-react";
+import { Sparkles, Leaf, TrendingUp, MapPin } from "lucide-react";
 
 const filters = [
   { id: "all", label: "All", icon: null },
   { id: "nearby", label: "Nearby", icon: MapPin },
-  { id: "trending", label: "Trending", icon: Flame },
+  { id: "trending", label: "Trending", icon: TrendingUp },
   { id: "new", label: "New", icon: Sparkles },
   { id: "hidden-gem", label: "Hidden Gems", icon: Leaf },
 ];
@@ -17,11 +17,14 @@ export default function FilterTabs({ active, onChange }) {
         return (
           <button
             key={f.id}
+            type="button"
             onClick={() => onChange(f.id)}
-            className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
               isActive
-                ? "bg-warm-600 text-white shadow-sm"
-                : "bg-white text-warm-500 border border-warm-100 hover:border-warm-300"
+                ? f.id === "new"
+                  ? "wandr-new-accent shadow-sm"
+                  : "bg-warm-600 text-white shadow-sm"
+                : "border border-warm-200 bg-transparent text-warm-500 hover:border-warm-400 hover:text-warm-700"
             }`}
           >
             {Icon && <Icon size={14} />}

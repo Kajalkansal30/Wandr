@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Leaf, Heart, BookOpen, Flame, Wallet } from "lucide-react";
+import { ArrowLeft, Sparkles, Leaf, Heart, BookOpen, TrendingUp, Wallet } from "lucide-react";
 import CafeCard from "../components/CafeCard";
 import { usePlaces } from "../contexts/PlacesContext";
 
@@ -44,7 +44,7 @@ const curatedLists = [
     id: "trending",
     title: "Trending Right Now",
     subtitle: "The spots everyone's saving",
-    icon: Flame,
+    icon: TrendingUp,
     filter: () => true,
     sort: (a, b) => (b.savedCount || 0) - (a.savedCount || 0),
     color: "bg-gold-100 text-gold-400",

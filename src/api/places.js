@@ -73,6 +73,7 @@ export function mapPlace(p) {
     openingDate: p.openingDate || null,
     needsInfoReasons: p.needsInfoReasons || null,
     adminNote: p.adminNote || null,
+    ownerId: p.ownerId != null ? String(p.ownerId) : null,
     ownerDisplayName: p.ownerDisplayName || null,
     menu: p.menu || [],
     savesThisWeek: p.savesThisWeek ?? 0,

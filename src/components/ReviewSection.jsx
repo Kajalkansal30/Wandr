@@ -62,13 +62,14 @@ function ReviewCard({ review }) {
   );
 }
 
-export default function ReviewSection({ cafeId }) {
+export default function ReviewSection({ cafeId, canWrite = true }) {
   const { user } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const showForm = Boolean(user) && canWrite;
 
   async function load() {
     try {
@@ -110,7 +111,7 @@ export default function ReviewSection({ cafeId }) {
 
   return (
     <div className="space-y-4">
-      {user ? (
+      {showForm ? (
         <form onSubmit={handleSubmit} className="rounded-xl border border-warm-100 bg-white p-4">
           <p className="mb-2 text-sm font-semibold text-warm-700">Your review</p>
           <StarRating value={rating} onChange={setRating} />
@@ -130,9 +131,13 @@ export default function ReviewSection({ cafeId }) {
             Post review
           </button>
         </form>
-      ) : (
+      ) : !user ? (
         <p className="text-sm text-warm-400">Sign in to leave a review.</p>
-      )}
+      ) : !canWrite ? (
+        <p className="rounded-xl border border-dashed border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-500">
+          Customer reviews appear here. You can&apos;t review your own listing.
+        </p>
+      ) : null}
 
       {reviews.length === 0 ? (
         <p className="py-6 text-center text-sm text-warm-400">No reviews yet — be the first.</p>

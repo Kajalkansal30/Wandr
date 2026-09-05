@@ -3,6 +3,7 @@ package com.wandr.seed;
 import com.wandr.domain.*;
 import com.wandr.repo.AnalyticsEventRepository;
 import com.wandr.repo.BoostCampaignRepository;
+import com.wandr.repo.PlaceMediaRepository;
 import com.wandr.repo.PlaceRepository;
 import com.wandr.repo.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class DataSeeder implements CommandLineRunner {
   private final PlaceRepository placeRepository;
   private final AnalyticsEventRepository analyticsEventRepository;
   private final BoostCampaignRepository boostCampaignRepository;
+  private final PlaceMediaRepository placeMediaRepository;
   private final PasswordEncoder passwordEncoder;
 
   @Override
@@ -31,6 +33,7 @@ public class DataSeeder implements CommandLineRunner {
     seedPlaces();
     backfillPlaceTrustFields();
     seedDemoAnalyticsAndBoost();
+    seedSpots();
   }
 
   private void backfillPlaceTrustFields() {
@@ -122,6 +125,60 @@ public class DataSeeder implements CommandLineRunner {
           .impressions(8420L)
           .profileVisits(427L)
           .directionClicks(61L)
+          .build());
+    }
+  }
+
+  private void seedSpots() {
+    if (!placeMediaRepository.findByStatusAndMediaTypeOrderByCreatedAtDesc(MediaStatus.APPROVED, MediaType.VIDEO).isEmpty()) {
+      return;
+    }
+    User user = userRepository.findByEmailIgnoreCase("user@wandr.test").orElse(null);
+    Place moon = placeRepository.findByNameIgnoreCase("Moon & Moss Café").orElse(null);
+    Place little = placeRepository.findByNameIgnoreCase("Little Corner Café").orElse(null);
+    Place brew = placeRepository.findByNameIgnoreCase("Brew & Bloom").orElse(null);
+    Place saffron = placeRepository.findByNameIgnoreCase("Saffron & Sage").orElse(null);
+
+    record Seed(Place place, String url, SpotKind kind, String caption, int likes) {}
+    List<Seed> seeds = new java.util.ArrayList<>();
+    if (moon != null) {
+      seeds.add(new Seed(moon,
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          SpotKind.AMBIENCE, "Quiet pour-overs and soft light — worth discovering in Hauz Khas.", 42));
+    }
+    if (little != null) {
+      seeds.add(new Seed(little,
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          SpotKind.HIDDEN_GEM, "A tiny garden café that still feels under the radar.", 88));
+    }
+    if (brew != null) {
+      seeds.add(new Seed(brew,
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+          SpotKind.FOOD, "Single-origin flat whites and a work-friendly corner.", 31));
+    }
+    if (saffron != null) {
+      seeds.add(new Seed(saffron,
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+          SpotKind.NEW_MENU, "New pistachio tiramisu just landed.", 56));
+    }
+    if (moon != null) {
+      seeds.add(new Seed(moon,
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          SpotKind.NEW_CAFE, "Freshly opened — still finding its rhythm.", 19));
+    }
+
+    for (Seed s : seeds) {
+      placeMediaRepository.save(PlaceMedia.builder()
+          .placeId(s.place().getId())
+          .userId(user != null ? user.getId() : null)
+          .url(s.url())
+          .mediaType(MediaType.VIDEO)
+          .spotKind(s.kind())
+          .caption(s.caption())
+          .likeCount(s.likes())
+          .durationSec(15)
+          .source(MediaSource.COMMUNITY)
+          .status(MediaStatus.APPROVED)
           .build());
     }
   }

@@ -59,16 +59,12 @@ export default function SignupPage() {
             Back to explore
           </Link>
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-300">
-              Out&amp;About
-            </p>
-            <h2
-              className="text-4xl font-bold leading-none text-white sm:text-5xl lg:text-6xl"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              wandr
-            </h2>
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">
+            <img
+              src="/logo.png"
+              alt="Wandr"
+              className="h-14 w-auto object-contain drop-shadow-md sm:h-16"
+            />
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">
               Join the community discovering the best local spots.
             </p>
           </div>
@@ -174,7 +170,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-warm-700 disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-terracotta-500 disabled:opacity-60"
             >
               {loading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />

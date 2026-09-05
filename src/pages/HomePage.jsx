@@ -30,12 +30,12 @@ import { trackEvent } from "../api/analytics";
 import { injectSponsoredSlot } from "../utils/sponsored";
 
 const VIBES = [
-  { id: "date", label: "Date Night", emoji: "❤️", image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400&q=80" },
-  { id: "study", label: "Quiet & Study", emoji: "📚", image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&q=80" },
-  { id: "work", label: "Work", emoji: "💻", image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&q=80" },
-  { id: "outdoor", label: "Outdoor", emoji: "🌿", image: "https://images.unsplash.com/photo-1442512595331-e89e7384260c?w=400&q=80" },
-  { id: "late-night", label: "Late Night", emoji: "🌙", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&q=80" },
-  { id: "photo", label: "Photo Spots", emoji: "📸", image: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=400&q=80" },
+  { id: "date", label: "Date Night", image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400&q=80" },
+  { id: "study", label: "Quiet & Study", image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&q=80" },
+  { id: "work", label: "Work", image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&q=80" },
+  { id: "outdoor", label: "Outdoor", image: "https://images.unsplash.com/photo-1442512595331-e89e7384260c?w=400&q=80" },
+  { id: "late-night", label: "Late Night", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&q=80" },
+  { id: "photo", label: "Photo Spots", image: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=400&q=80" },
 ];
 
 export default function HomePage() {
@@ -372,7 +372,6 @@ export default function HomePage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <span className="mb-0.5 block text-lg">{vibe.emoji}</span>
                       <span className="text-xs font-semibold leading-tight text-white">{vibe.label}</span>
                     </div>
                   </button>
@@ -444,7 +443,7 @@ export default function HomePage() {
                             : "border border-warm-200 bg-white text-warm-600 hover:border-warm-400"
                         }`}
                       >
-                        {pref.emoji} {pref.label}
+                        {pref.label}
                       </button>
                     );
                   })}

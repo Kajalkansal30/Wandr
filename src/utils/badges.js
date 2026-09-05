@@ -12,7 +12,7 @@ export function computeBadges({ savedPlaces = [], submittedCount = 0 }) {
       id: "early-finder",
       title: "Early Finder",
       desc: "Found places before they became popular.",
-      icon: "🏆",
+      icon: "early",
     });
   }
   if (submittedCount >= 1 || savedPlaces.length >= 10) {
@@ -20,7 +20,7 @@ export function computeBadges({ savedPlaces = [], submittedCount = 0 }) {
       id: "local-scout",
       title: "Local Scout",
       desc: "Helping map what’s worth discovering.",
-      icon: "🧭",
+      icon: "scout",
     });
   }
   if (gemSaves.length >= 3) {
@@ -28,7 +28,7 @@ export function computeBadges({ savedPlaces = [], submittedCount = 0 }) {
       id: "gem-hunter",
       title: "Gem Hunter",
       desc: "Discovered hidden gems.",
-      icon: "💎",
+      icon: "gem",
     });
   }
   if (risingSaves.length >= 2) {
@@ -36,7 +36,7 @@ export function computeBadges({ savedPlaces = [], submittedCount = 0 }) {
       id: "trend-spotter",
       title: "Trend Spotter",
       desc: "Found rising places early.",
-      icon: "🔥",
+      icon: "trend",
     });
   }
   return badges;

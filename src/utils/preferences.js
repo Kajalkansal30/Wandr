@@ -2,12 +2,12 @@ const PREF_KEY = "wandr_taste_prefs";
 const SESSION_KEY = "wandr_analytics_session";
 
 export const TASTE_BOOTSTRAP = [
-  { id: "coffee", label: "Coffee", emoji: "☕", category: "coffee" },
-  { id: "desserts", label: "Desserts", emoji: "🍰", category: "desserts" },
-  { id: "outdoor", label: "Outdoor", emoji: "🌿", category: "outdoor" },
-  { id: "study", label: "Study", emoji: "📚", category: "study" },
-  { id: "date", label: "Date", emoji: "❤️", category: "date" },
-  { id: "work", label: "Work", emoji: "💻", category: "work" },
+  { id: "coffee", label: "Coffee", category: "coffee" },
+  { id: "desserts", label: "Desserts", category: "desserts" },
+  { id: "outdoor", label: "Outdoor", category: "outdoor" },
+  { id: "study", label: "Study", category: "study" },
+  { id: "date", label: "Date", category: "date" },
+  { id: "work", label: "Work", category: "work" },
 ];
 
 export function loadTastePrefs() {

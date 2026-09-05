@@ -40,6 +40,8 @@ public class MediaService {
         .placeId(placeId)
         .userId(user != null ? user.getId() : null)
         .url(req.url().trim())
+        .mediaType(MediaType.PHOTO)
+        .likeCount(0)
         .source(ownerUpload ? MediaSource.OWNER : MediaSource.COMMUNITY)
         .status(ownerUpload ? MediaStatus.APPROVED : MediaStatus.PENDING)
         .build());

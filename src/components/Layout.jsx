@@ -5,7 +5,7 @@ const HIDE_NAV = ["/login", "/signup", "/welcome"];
 
 export default function Layout() {
   const { pathname } = useLocation();
-  const hideNav = HIDE_NAV.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const hideNav = HIDE_NAV.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   return (
     <div className="app-canvas">

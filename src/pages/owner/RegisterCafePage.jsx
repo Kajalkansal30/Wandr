@@ -6,15 +6,15 @@ import { createPlace } from "../../api/owner";
 import MapPinPicker from "../../components/MapPinPicker";
 
 const LOCATION_TYPES = [
-  { id: "CAFE", label: "Café", emoji: "☕" },
-  { id: "HOME_BAKERY", label: "Home Bakery", emoji: "🍰" },
-  { id: "FOOD_TRUCK", label: "Food Truck", emoji: "🚚" },
-  { id: "STREET_FOOD", label: "Street Food", emoji: "🛒" },
-  { id: "RESTAURANT", label: "Restaurant", emoji: "🍽" },
-  { id: "HOME_KITCHEN", label: "Home Kitchen", emoji: "🏠" },
-  { id: "POP_UP", label: "Pop-up", emoji: "🎪" },
-  { id: "BEVERAGE_STALL", label: "Beverage Stall", emoji: "🥤" },
-  { id: "OTHER", label: "Other", emoji: "✨" },
+  { id: "CAFE", label: "Café" },
+  { id: "HOME_BAKERY", label: "Home Bakery" },
+  { id: "FOOD_TRUCK", label: "Food Truck" },
+  { id: "STREET_FOOD", label: "Street Food" },
+  { id: "RESTAURANT", label: "Restaurant" },
+  { id: "HOME_KITCHEN", label: "Home Kitchen" },
+  { id: "POP_UP", label: "Pop-up" },
+  { id: "BEVERAGE_STALL", label: "Beverage Stall" },
+  { id: "OTHER", label: "Other" },
 ];
 
 const categories = [
@@ -209,10 +209,9 @@ export default function RegisterCafePage() {
                 type="button"
                 onClick={() => update("locationType", t.id)}
                 className={`rounded-xl px-2 py-3 text-center text-xs font-semibold ${
-                  form.locationType === t.id ? "bg-warm-600 text-white" : "border border-warm-100 bg-white text-warm-600"
+                  form.locationType === t.id ? "bg-warm-600 text-white" : "border border-warm-200 bg-transparent text-warm-600"
                 }`}
               >
-                <span className="mb-1 block text-lg">{t.emoji}</span>
                 {t.label}
               </button>
             ))}
@@ -349,7 +348,7 @@ export default function RegisterCafePage() {
           <button
             type="button"
             onClick={tryAdvance}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white transition hover:bg-warm-700 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white transition hover:bg-terracotta-500 disabled:opacity-50"
           >
             Continue <ArrowRight size={18} />
           </button>

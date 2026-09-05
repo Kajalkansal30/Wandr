@@ -16,6 +16,7 @@ import { loadSavedIds, toggleSavedCafe } from "../utils/favorites";
 import { discoveryLabel, experienceTags, photoSpot, saveGrowthPct } from "../utils/discovery";
 import { trackEvent } from "../api/analytics";
 import { hoursAgoLabel, operatingLabel, addressLabel } from "../utils/placeStatus";
+import { fetchPlaceSpots } from "../api/spotted";
 
 const attrIcons = {
   wifi: { icon: Wifi, format: (v) => (v === "fast" ? "Fast WiFi" : v === "basic" ? "Basic WiFi" : null) },
@@ -46,6 +47,7 @@ export default function CafeDetailPage() {
   const [claimBusy, setClaimBusy] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState("");
+  const [spots, setSpots] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +74,13 @@ export default function CafeDetailPage() {
   useEffect(() => {
     if (!cafe) return;
     trackEvent("place_view", { placeId: cafe.id, source: "detail" });
+  }, [cafe?.id]);
+
+  useEffect(() => {
+    if (!cafe?.id) return;
+    fetchPlaceSpots(cafe.id)
+      .then(setSpots)
+      .catch(() => setSpots([]));
   }, [cafe?.id]);
 
   useEffect(() => {
@@ -170,7 +179,12 @@ export default function CafeDetailPage() {
   const trustItems = cafe.verifiedDetails?.length ? cafe.verifiedDetails : [];
   const freshness = hoursAgoLabel(cafe.lastInformationCheck);
   const openInfo = operatingLabel(cafe);
-  const canClaim = cafe.ownershipStatus === "UNCLAIMED";
+  const isOwnListing =
+    Boolean(user) &&
+    (role === "owner" || role === "admin") &&
+    cafe.ownerId != null &&
+    String(cafe.ownerId) === String(user.uid);
+  const canClaim = !isOwnListing && cafe.ownershipStatus === "UNCLAIMED";
   const toneClass =
     openInfo?.tone === "good"
       ? "text-sage-500"
@@ -223,13 +237,13 @@ export default function CafeDetailPage() {
         </div>
       </div>
 
-      {/* Owner manage bar */}
-      {user && (role === "owner" || role === "admin") && cafe.ownerDisplayName && (
-        <div className="mt-3 flex items-center justify-between rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
+      {/* Owner manage bar — always for own listing */}
+      {isOwnListing && (
+        <div className="sticky top-0 z-30 mt-3 flex items-center justify-between rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 shadow-sm">
           <div>
             <p className="text-sm font-semibold text-warm-700">Your listing</p>
             <p className="text-xs text-warm-400">
-              {cafe.status === "approved" || cafe.status === "APPROVED" ? "Live on Discover" : `Status: ${cafe.status}`}
+              {(cafe.status === "approved" || cafe.status === "APPROVED") ? "Live on Discover" : `Status: ${cafe.status}`}
               {cafe.ownershipStatus === "OWNER_VERIFIED" && " · Verified"}
             </p>
           </div>
@@ -237,7 +251,7 @@ export default function CafeDetailPage() {
             <button
               type="button"
               onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-warm-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-warm-700"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-warm-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-terracotta-500"
             >
               <Edit size={13} /> Edit
             </button>
@@ -287,7 +301,7 @@ export default function CafeDetailPage() {
         </div>
 
         {label?.kind === "rising" && growth > 0 && (
-          <p className="mt-3 text-sm font-semibold text-warm-700">🔥 Rising — +{growth}% saves this week</p>
+          <p className="mt-3 text-sm font-medium text-warm-400">Rising · +{growth}% saves this week</p>
         )}
 
         {vibes.length > 0 && (
@@ -300,6 +314,43 @@ export default function CafeDetailPage() {
             {photoSpot(cafe) && !vibes.includes("Photo spot") && (
               <span className="rounded-full bg-warm-50 px-3 py-1.5 text-xs font-medium text-warm-600">Photo spot</span>
             )}
+          </div>
+        )}
+
+        {spots.length > 0 && (
+          <div className="mt-6">
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-warm-700" style={{ fontFamily: "var(--font-display)" }}>
+                  Spotted here
+                </h3>
+                <p className="text-xs text-warm-400">Short videos from this café</p>
+              </div>
+              <Link to="/spotted" className="text-xs font-semibold text-warm-600">
+                Open Spotted
+              </Link>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+              {spots.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => navigate(`/spotted?spot=${s.id}`)}
+                  className="relative h-40 w-28 shrink-0 overflow-hidden rounded-xl bg-warm-800"
+                >
+                  <video
+                    src={s.url}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                    <p className="line-clamp-2 text-[10px] font-medium text-white">{s.caption || "Spot"}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -368,48 +419,85 @@ export default function CafeDetailPage() {
           </div>
         )}
 
-        <div className="mt-4 rounded-xl border border-warm-100 bg-white p-4">
-          <h3 className="mb-2 text-sm font-semibold text-warm-700">Is this still correct?</h3>
-          <p className="mb-3 text-xs text-warm-400">Location · Hours · Price · Menu</p>
-          <div className="flex flex-wrap gap-2">
+        {!isOwnListing && (
+          <div className="mt-4 rounded-xl border border-warm-100 bg-white p-4">
+            <h3 className="mb-2 text-sm font-semibold text-warm-700">Is this still correct?</h3>
+            <p className="mb-3 text-xs text-warm-400">Location · Hours · Price · Menu</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={confirmBusy}
+                onClick={() => handleConfirm(true)}
+                className="rounded-full bg-sage-100 px-4 py-2 text-xs font-semibold text-sage-500"
+              >
+                ✓ Yes, looks right
+              </button>
+              <button
+                type="button"
+                disabled={confirmBusy}
+                onClick={() => handleConfirm(false)}
+                className="rounded-full bg-warm-100 px-4 py-2 text-xs font-semibold text-warm-600"
+              >
+                ✕ Something&apos;s off
+              </button>
+            </div>
+            {confirmMsg && <p className="mt-2 text-xs text-warm-500">{confirmMsg}</p>}
+          </div>
+        )}
+
+        {isOwnListing && (
+          <div className="mt-4 rounded-xl border border-warm-200 bg-warm-50 p-4">
+            <p className="text-sm font-semibold text-warm-700">Manage this listing</p>
+            <p className="mt-1 text-xs text-warm-400">Update hours, photos, menu, and contact — changes stay saved in your Business Hub.</p>
             <button
               type="button"
-              disabled={confirmBusy}
-              onClick={() => handleConfirm(true)}
-              className="rounded-full bg-sage-100 px-4 py-2 text-xs font-semibold text-sage-500"
+              onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-warm-600 px-4 py-2.5 text-sm font-semibold text-white"
             >
-              ✓ Yes, looks right
-            </button>
-            <button
-              type="button"
-              disabled={confirmBusy}
-              onClick={() => handleConfirm(false)}
-              className="rounded-full bg-warm-100 px-4 py-2 text-xs font-semibold text-warm-600"
-            >
-              ✕ Something&apos;s off
+              <Edit size={14} /> Edit &amp; save details
             </button>
           </div>
-          {confirmMsg && <p className="mt-2 text-xs text-warm-500">{confirmMsg}</p>}
-        </div>
+        )}
 
         <p className="mt-3 text-sm text-warm-400">{addressLabel(cafe)}</p>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={handleDirections}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-warm-700"
-          >
-            <Navigation size={16} /> Go there
-          </button>
-          <button
-            type="button"
-            onClick={toggleSave}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 font-semibold text-warm-600 transition hover:bg-warm-50"
-          >
-            <Heart size={16} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
-            {saved ? "Saved" : "Save"}
-          </button>
+          {isOwnListing ? (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-terracotta-500"
+              >
+                <Edit size={16} /> Edit listing
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/owner/dashboard")}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 font-semibold text-warm-600 transition hover:bg-warm-50"
+              >
+                Business Hub
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleDirections}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-terracotta-500"
+              >
+                <Navigation size={16} /> Go there
+              </button>
+              <button
+                type="button"
+                onClick={toggleSave}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 font-semibold text-warm-600 transition hover:bg-warm-50"
+              >
+                <Heart size={16} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
+                {saved ? "Saved" : "Save"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -509,7 +597,9 @@ export default function CafeDetailPage() {
 
         {activeTab === "Menu" && <MenuSection menu={cafe.menu} />}
 
-        {activeTab === "Reviews" && <ReviewSection cafeId={String(cafe.id)} />}
+        {activeTab === "Reviews" && (
+          <ReviewSection cafeId={String(cafe.id)} canWrite={!isOwnListing} />
+        )}
 
         {activeTab === "Info" && (
           <div className="space-y-5">
@@ -574,7 +664,7 @@ export default function CafeDetailPage() {
               )}
             </div>
 
-            {user && (
+            {user && !isOwnListing && (
               <button
                 type="button"
                 onClick={() => setShowReport(true)}
@@ -589,33 +679,45 @@ export default function CafeDetailPage() {
 
       {/* Engagement CTA */}
       <div className="mt-8 mb-4 space-y-3">
-        {activeTab !== "Reviews" && (
+        {isOwnListing ? (
           <button
             type="button"
-            onClick={() => setActiveTab("Reviews")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
+            onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 text-sm font-semibold text-white transition hover:bg-terracotta-500"
           >
-            <Star size={15} className="text-gold-400" />
-            {user ? "Write a review" : "Read reviews"}
+            <Edit size={15} /> Edit &amp; save listing
           </button>
+        ) : (
+          activeTab !== "Reviews" && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("Reviews")}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
+            >
+              <Star size={15} className="text-gold-400" />
+              {user ? "Write a review" : "Read reviews"}
+            </button>
+          )
         )}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={toggleSave}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
-          >
-            <Heart size={15} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
-            {saved ? "Saved" : "Save for later"}
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
-          >
-            <Share2 size={15} /> Share
-          </button>
-        </div>
+        {!isOwnListing && (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={toggleSave}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
+            >
+              <Heart size={15} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
+              {saved ? "Saved" : "Save for later"}
+            </button>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
+            >
+              <Share2 size={15} /> Share
+            </button>
+          </div>
+        )}
         {!user && (
           <p className="text-center text-xs text-warm-400">
             <button type="button" onClick={() => navigate("/login")} className="font-semibold text-warm-600 underline">Sign in</button>

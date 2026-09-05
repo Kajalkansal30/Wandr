@@ -237,7 +237,7 @@ export default function EditCafePage() {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="mt-8 w-full bg-warm-600 hover:bg-warm-700 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition disabled:opacity-60"
+        className="mt-8 w-full bg-warm-600 hover:bg-terracotta-500 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition disabled:opacity-60"
       >
         {saving ? <><Loader size={18} className="animate-spin" /> Saving...</> : "Save Changes"}
       </button>

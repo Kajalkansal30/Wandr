@@ -98,6 +98,7 @@ public class PlaceDtos {
       LocalDate openingDate,
       String needsInfoReasons,
       String adminNote,
+      Long ownerId,
       String ownerDisplayName,
       Double distance,
       Boolean sponsored,
@@ -167,6 +168,7 @@ public class PlaceDtos {
           p.getOpeningDate(),
           p.getNeedsInfoReasons(),
           p.getAdminNote(),
+          ownerId(p),
           ownerDisplayName(p),
           distanceKm,
           sponsored,
@@ -174,6 +176,17 @@ public class PlaceDtos {
           boostCampaignId,
           boostEndsAt
       );
+    }
+
+    private static Long ownerId(Place p) {
+      try {
+        var owner = p.getOwner();
+        if (owner == null) return null;
+        if (!org.hibernate.Hibernate.isInitialized(owner)) return null;
+        return owner.getId();
+      } catch (Exception ignored) {
+        return null;
+      }
     }
 
     /** Avoid LazyInitializationException when open-in-view is false and owner wasn't fetched. */

@@ -56,16 +56,12 @@ export default function SplashPage() {
       {/* CTA panel — flows with screen */}
       <div className="flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-16">
         <div className="mx-auto w-full max-w-md text-center lg:text-left">
-          <h1
-            className="text-4xl font-bold leading-[1.05] tracking-tight text-warm-700 sm:text-5xl"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            wandr
-          </h1>
-          <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-terracotta-400">
-            Out&amp;About
-          </p>
-          <p className="mx-auto mt-5 max-w-sm text-base leading-relaxed text-warm-500 lg:mx-0">
+          <img
+            src="/logo.png"
+            alt="Wandr"
+            className="mx-auto h-16 w-auto object-contain lg:mx-0 lg:h-20"
+          />
+          <p className="mx-auto mt-5 max-w-sm text-base leading-relaxed text-warm-400 lg:mx-0">
             Discover new cafés, hidden gems, and local food spots before everyone else.
           </p>
 
@@ -73,7 +69,7 @@ export default function SplashPage() {
             <button
               onClick={requestLocation}
               disabled={requesting}
-              className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-warm-600 py-4 font-bold text-white shadow-sm transition hover:bg-warm-700 disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-warm-600 py-4 font-bold text-white shadow-sm transition hover:bg-terracotta-500 disabled:opacity-60"
             >
               {requesting ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />

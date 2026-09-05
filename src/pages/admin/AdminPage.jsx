@@ -88,7 +88,7 @@ export default function AdminPage() {
         {[
           { id: "listings", label: "Listings", icon: Store },
           { id: "claims", label: "Claims", icon: UserCheck },
-          { id: "media", label: "Photos", icon: Image },
+          { id: "media", label: "Media", icon: Image },
           { id: "audit", label: "Audit", icon: ScrollText },
         ].map((t) => {
           const Icon = t.icon;
@@ -204,12 +204,26 @@ export default function AdminPage() {
         )
       ) : view === "media" ? (
         media.length === 0 ? (
-          <p className="py-12 text-center text-sm text-warm-400">No pending photos.</p>
+          <p className="py-12 text-center text-sm text-warm-400">No pending media.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {media.map((m) => (
+            {media.map((m) => {
+              const isVideo = m.mediaType === "VIDEO" || /\.(mp4|webm|mov)(\?|$)/i.test(m.url || "");
+              return (
               <div key={m.id} className="overflow-hidden rounded-xl border border-warm-100 bg-white">
-                <img src={m.url} alt="" className="aspect-video w-full object-cover" />
+                {isVideo ? (
+                  <video src={m.url} controls playsInline className="aspect-video w-full bg-warm-800 object-cover" />
+                ) : (
+                  <img src={m.url} alt="" className="aspect-video w-full object-cover" />
+                )}
+                <div className="space-y-1 px-2 pt-2">
+                  {m.caption && <p className="line-clamp-2 text-xs text-warm-600">{m.caption}</p>}
+                  <p className="text-[11px] text-warm-400">
+                    Place #{m.placeId}
+                    {m.spotKind ? ` · ${m.spotKind}` : ""}
+                    {m.mediaType ? ` · ${m.mediaType}` : ""}
+                  </p>
+                </div>
                 <div className="flex gap-2 p-2">
                   <button
                     type="button"
@@ -233,7 +247,8 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )
       ) : (

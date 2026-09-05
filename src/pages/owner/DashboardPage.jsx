@@ -150,7 +150,7 @@ export default function DashboardPage() {
         </div>
         <Link
           to="/owner/register-cafe"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-warm-600 shadow-md transition hover:bg-warm-700"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-warm-600 shadow-md transition hover:bg-terracotta-500"
         >
           <Plus size={20} className="text-white" />
         </Link>
@@ -209,7 +209,7 @@ export default function DashboardPage() {
               </p>
               <Link
                 to="/owner/register-cafe"
-                className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-warm-700"
+                className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-terracotta-500"
               >
                 <Plus size={18} /> Register Your Cafe
               </Link>
@@ -219,14 +219,13 @@ export default function DashboardPage() {
               {cafes.map((cafe) => {
                 const st = cafe.status?.toLowerCase() || "pending";
                 const isPending = st === "pending" || st === "pending_review";
-                const isLive = st === "approved";
                 const cfg = statusConfig[cafe.status] || statusConfig[st] || statusConfig.pending;
                 const StatusIcon = cfg.icon;
                 return (
                   <button
                     key={cafe.id}
                     type="button"
-                    onClick={() => navigate(isLive ? `/cafe/${cafe.id}` : `/owner/edit-cafe/${cafe.id}`)}
+                    onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
                     className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:shadow-sm ${isPending ? "border-gold-200 bg-gold-50/40" : "border-warm-100 bg-white"}`}
                   >
                     <img
@@ -256,7 +255,7 @@ export default function DashboardPage() {
                         <p className="mt-0.5 text-xs text-gold-500">Waiting for admin approval · tap to edit</p>
                       ) : (
                         <p className="mt-0.5 text-xs text-warm-400">
-                          {cafe.city || cafe.address || "—"} · {cafe.savedCount || 0} saves · {cafe.reviewCount || 0} reviews
+                          Tap to edit · {cafe.city || cafe.address || "—"} · {cafe.savedCount || 0} saves
                         </p>
                       )}
                     </div>

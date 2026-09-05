@@ -54,7 +54,7 @@ export default function ReportModal({ cafeId, cafeName, onClose }) {
             </p>
             <button
               onClick={onClose}
-              className="mt-4 px-6 py-2.5 bg-warm-600 text-white rounded-xl text-sm font-semibold hover:bg-warm-700 transition"
+              className="mt-4 px-6 py-2.5 bg-warm-600 text-white rounded-xl text-sm font-semibold hover:bg-terracotta-500 transition"
             >
               Done
             </button>
@@ -96,7 +96,7 @@ export default function ReportModal({ cafeId, cafeName, onClose }) {
             <button
               onClick={handleSubmit}
               disabled={!reason || submitting}
-              className="w-full bg-warm-600 hover:bg-warm-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
+              className="w-full bg-warm-600 hover:bg-terracotta-500 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
             >
               {submitting ? "Submitting..." : "Submit Report"}
             </button>
