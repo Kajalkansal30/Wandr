@@ -4,6 +4,7 @@ import { ArrowLeft, Rocket, Check } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchMyPlaces } from "../../api/owner";
 import { createBoost } from "../../api/ownerAnalytics";
+import OwnerTopBar from "../../components/OwnerTopBar";
 
 const AUDIENCES = [
   { id: "coffee", label: "Coffee lovers" },
@@ -129,6 +130,7 @@ export default function BoostPage() {
 
   return (
     <div className="page-shell page-with-nav pt-6 md:pt-8">
+      <OwnerTopBar subtitle="Promote your place nearby" />
       <button
         type="button"
         onClick={() => navigate("/owner/dashboard?tab=promote")}

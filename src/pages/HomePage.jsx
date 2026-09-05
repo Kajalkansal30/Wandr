@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { MapIcon, List, MapPin, ArrowRight, Search, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
-import Header from "../components/Header";
 import SearchBar from "../components/SearchBar";
 import CategoryScroll from "../components/CategoryScroll";
 import DiscoverySection from "../components/DiscoverySection";
@@ -126,74 +125,84 @@ export default function HomePage() {
 
   if (placesLoading && allPlaces.length === 0) {
     return (
-      <>
-        <Header />
-        <main className="page-shell page-with-nav flex justify-center pt-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-warm-200 border-t-warm-500" />
-        </main>
-      </>
+      <main className="page-shell page-with-nav flex justify-center pt-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-warm-200 border-t-warm-500" />
+      </main>
     );
   }
 
+  const showHero = !isFiltered && viewMode === "list";
+
   return (
     <>
-      <Header />
-      <main className="page-shell page-with-nav pt-6">
-        {!isFiltered && viewMode === "list" && (
-          <section className="mb-8 md:mb-10">
-            <div className="mb-4 flex flex-wrap items-center gap-2">
+      <main className="discover-canvas page-with-nav">
+        {showHero && (
+          <section className="discover-hero" aria-label="Discover">
+            <div
+              className="discover-hero__media"
+              style={{
+                backgroundImage:
+                  "url(https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1920&q=80)",
+              }}
+              aria-hidden
+            />
+            <div className="discover-hero__veil" aria-hidden />
+            <div className="page-shell discover-hero__content">
+              <div className="discover-hero__reveal discover-hero__reveal--1 mb-4 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAreaOpen(true)}
+                  className="discover-hero__chip inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-warm-700 transition hover:bg-white/90"
+                >
+                  <MapPin size={14} className="text-terracotta-400" />
+                  {areaDisplayLabel(area)}
+                </button>
+                <Link
+                  to={`/whats-new/${encodeURIComponent(area.city || area.label || "Delhi")}`}
+                  className="text-xs font-semibold text-warm-600 underline-offset-2 hover:underline"
+                >
+                  What&apos;s new here?
+                </Link>
+              </div>
+
+              <div className="discover-hero__reveal discover-hero__reveal--2 mb-5 w-full max-w-3xl">
+                <h1
+                  className="text-[1.75rem] font-bold leading-tight tracking-tight text-warm-700 sm:text-4xl md:text-5xl"
+                  style={{ fontFamily: "var(--font-display)" }}
+                >
+                  Find somewhere worth discovering.
+                </h1>
+                <p className="mt-2 text-sm leading-relaxed text-warm-500 sm:mt-3 sm:text-base md:text-lg">
+                  New cafés, hidden gems, street food and local spots before everyone else finds them.
+                </p>
+              </div>
+
+              <div className="discover-hero__reveal discover-hero__reveal--3 mb-4 w-full max-w-3xl">
+                <SearchBar
+                  value={search}
+                  onChange={(v) => {
+                    setSearch(v);
+                    if (v) setCategory(null);
+                  }}
+                  onShortcutCategory={(id) => {
+                    setCategory(id);
+                    setSearch("");
+                  }}
+                />
+              </div>
+
               <button
                 type="button"
-                onClick={() => setAreaOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-warm-200 bg-white px-3 py-1.5 text-sm font-medium text-warm-600 transition hover:border-warm-400"
+                onClick={() => newSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
+                className="discover-hero__reveal discover-hero__reveal--4 inline-flex items-center gap-2 text-sm font-semibold text-terracotta-500 transition hover:text-terracotta-400"
               >
-                <MapPin size={14} className="text-terracotta-400" />
-                {areaDisplayLabel(area)}
+                Explore nearby <ArrowRight size={14} />
               </button>
-              <Link
-                to={`/whats-new/${encodeURIComponent(area.city || area.label || "Delhi")}`}
-                className="text-xs font-semibold text-warm-500 underline-offset-2 hover:underline"
-              >
-                What&apos;s new here?
-              </Link>
             </div>
-
-            <div className="mb-5 w-full max-w-3xl">
-              <h1
-                className="text-[1.75rem] font-bold leading-tight tracking-tight text-warm-700 sm:text-4xl md:text-5xl"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Find somewhere worth discovering.
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-warm-400 sm:mt-3 sm:text-base md:text-lg">
-                New cafés, hidden gems, street food and local spots before everyone else finds them.
-              </p>
-            </div>
-
-            <div className="mb-4 w-full max-w-3xl">
-              <SearchBar
-                value={search}
-                onChange={(v) => {
-                  setSearch(v);
-                  if (v) setCategory(null);
-                }}
-                onShortcutCategory={(id) => {
-                  setCategory(id);
-                  setSearch("");
-                }}
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => newSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-warm-600 transition hover:text-warm-700"
-            >
-              Explore nearby <ArrowRight size={14} />
-            </button>
           </section>
         )}
 
+        <div className={`page-shell ${showHero ? "discover-after-hero" : "pt-6"}`}>
         {(isFiltered || viewMode === "map") && (
           <div className="mb-6">
             <h2
@@ -452,6 +461,7 @@ export default function HomePage() {
             ) : null}
           </div>
         )}
+        </div>
       </main>
 
       <ExploreAnywhereSheet

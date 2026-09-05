@@ -13,10 +13,12 @@ import ReviewSection from "../components/ReviewSection";
 import MenuSection from "../components/MenuSection";
 import ReportModal from "../components/ReportModal";
 import { loadSavedIds, toggleSavedCafe } from "../utils/favorites";
-import { discoveryLabel, experienceTags, photoSpot, saveGrowthPct } from "../utils/discovery";
+import { discoveryLabel, experienceTags, photoSpot } from "../utils/discovery";
 import { trackEvent } from "../api/analytics";
 import { hoursAgoLabel, operatingLabel, addressLabel } from "../utils/placeStatus";
 import { fetchPlaceSpots } from "../api/spotted";
+import SaveToCollectionSheet from "../components/SaveToCollectionSheet";
+import { removePlaceFromAllCollections } from "../utils/collections";
 
 const attrIcons = {
   wifi: { icon: Wifi, format: (v) => (v === "fast" ? "Fast WiFi" : v === "basic" ? "Basic WiFi" : null) },
@@ -48,6 +50,7 @@ export default function CafeDetailPage() {
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState("");
   const [spots, setSpots] = useState([]);
+  const [saveSheetOpen, setSaveSheetOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +121,8 @@ export default function CafeDetailPage() {
     setSaved(!prev);
     try {
       await toggleSavedCafe(user, cafe.id, prev);
+      if (!prev) setSaveSheetOpen(true);
+      else removePlaceFromAllCollections(user.uid, cafe.id);
     } catch {
       setSaved(prev);
     }
@@ -174,8 +179,7 @@ export default function CafeDetailPage() {
 
   const priceLabel = "₹".repeat(cafe.priceLevel);
   const label = discoveryLabel(cafe);
-  const vibes = experienceTags(cafe, 4);
-  const growth = saveGrowthPct(cafe);
+  const vibes = experienceTags(cafe, 3);
   const trustItems = cafe.verifiedDetails?.length ? cafe.verifiedDetails : [];
   const freshness = hoursAgoLabel(cafe.lastInformationCheck);
   const openInfo = operatingLabel(cafe);
@@ -219,22 +223,13 @@ export default function CafeDetailPage() {
           <ArrowLeft size={18} className="text-warm-700" />
         </button>
 
-        <div className="absolute top-3 right-3 flex gap-2 sm:top-4 sm:right-4">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white"
-          >
-            <Share2 size={16} className="text-warm-600" />
-          </button>
-          <button
-            type="button"
-            onClick={toggleSave}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white"
-          >
-            <Heart size={16} className={saved ? "fill-terracotta-400 text-terracotta-400" : "text-warm-500"} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="absolute top-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white sm:top-4 sm:right-4"
+        >
+          <Share2 size={16} className="text-warm-600" />
+        </button>
       </div>
 
       {/* Owner manage bar — always for own listing */}
@@ -300,8 +295,21 @@ export default function CafeDetailPage() {
           )}
         </div>
 
-        {label?.kind === "rising" && growth > 0 && (
-          <p className="mt-3 text-sm font-medium text-warm-400">Rising · +{growth}% saves this week</p>
+        {(trustItems.length > 0 || freshness) && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-warm-400">
+            {trustItems.map((detail) => (
+              <span key={detail} className="inline-flex items-center gap-1">
+                <CheckCircle size={11} className="shrink-0 text-sage-500" />
+                {detail}
+              </span>
+            ))}
+            {freshness && (
+              <span className="inline-flex items-center gap-1">
+                <Clock size={11} className="shrink-0 text-warm-300" />
+                {freshness}
+              </span>
+            )}
+          </div>
         )}
 
         {vibes.length > 0 && (
@@ -311,11 +319,30 @@ export default function CafeDetailPage() {
                 {t}
               </span>
             ))}
-            {photoSpot(cafe) && !vibes.includes("Photo spot") && (
-              <span className="rounded-full bg-warm-50 px-3 py-1.5 text-xs font-medium text-warm-600">Photo spot</span>
-            )}
           </div>
         )}
+
+        {!isOwnListing && (
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={handleDirections}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-terracotta-500"
+            >
+              <Navigation size={16} /> Go there
+            </button>
+            <button
+              type="button"
+              onClick={toggleSave}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 font-semibold text-warm-600 transition hover:bg-warm-50"
+            >
+              <Heart size={16} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
+              {saved ? "Saved" : "Save"}
+            </button>
+          </div>
+        )}
+
+        <p className="mt-3 text-sm text-warm-400">{addressLabel(cafe)}</p>
 
         {spots.length > 0 && (
           <div className="mt-6">
@@ -353,152 +380,6 @@ export default function CafeDetailPage() {
             </div>
           </div>
         )}
-
-        <div className="mt-5 rounded-xl border border-warm-100 bg-white p-4">
-          <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-warm-400">Trust & freshness</h3>
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {trustItems.length === 0 ? (
-              <span className="text-sm text-warm-400">No verification signals yet</span>
-            ) : (
-              trustItems.map((detail) => (
-                <span key={detail} className="flex items-center gap-1.5 text-sm text-warm-600">
-                  <CheckCircle size={12} className="shrink-0 text-sage-500" />
-                  {detail}
-                </span>
-              ))
-            )}
-            {freshness && (
-              <span className="flex items-center gap-1.5 text-sm text-warm-500">
-                <Clock size={12} className="shrink-0 text-warm-300" />
-                {freshness}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {canClaim && (
-          <div className="mt-4 rounded-xl border border-dashed border-warm-200 bg-warm-50 p-4">
-            <p className="text-sm font-semibold text-warm-700">Owner hasn&apos;t claimed this place</p>
-            <p className="mt-1 text-xs text-warm-400">Are you the owner or manager?</p>
-            {!claimOpen ? (
-              <button
-                type="button"
-                onClick={() => {
-                  trackEvent("claim_start", { placeId: cafe.id, source: "detail" });
-                  setClaimOpen(true);
-                }}
-                className="mt-3 rounded-xl bg-warm-700 px-4 py-2 text-sm font-semibold text-white"
-              >
-                Claim this business
-              </button>
-            ) : (
-              <div className="mt-3 space-y-2">
-                <input
-                  value={claimPhone}
-                  onChange={(e) => setClaimPhone(e.target.value)}
-                  placeholder="Business phone"
-                  className="w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-sm"
-                />
-                <textarea
-                  value={claimEvidence}
-                  onChange={(e) => setClaimEvidence(e.target.value)}
-                  placeholder="Brief evidence (Instagram, docs, etc.)"
-                  rows={2}
-                  className="w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-sm"
-                />
-                <button
-                  type="button"
-                  disabled={claimBusy}
-                  onClick={handleClaim}
-                  className="rounded-xl bg-warm-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {claimBusy ? "Submitting…" : "Submit claim"}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {!isOwnListing && (
-          <div className="mt-4 rounded-xl border border-warm-100 bg-white p-4">
-            <h3 className="mb-2 text-sm font-semibold text-warm-700">Is this still correct?</h3>
-            <p className="mb-3 text-xs text-warm-400">Location · Hours · Price · Menu</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={confirmBusy}
-                onClick={() => handleConfirm(true)}
-                className="rounded-full bg-sage-100 px-4 py-2 text-xs font-semibold text-sage-500"
-              >
-                ✓ Yes, looks right
-              </button>
-              <button
-                type="button"
-                disabled={confirmBusy}
-                onClick={() => handleConfirm(false)}
-                className="rounded-full bg-warm-100 px-4 py-2 text-xs font-semibold text-warm-600"
-              >
-                ✕ Something&apos;s off
-              </button>
-            </div>
-            {confirmMsg && <p className="mt-2 text-xs text-warm-500">{confirmMsg}</p>}
-          </div>
-        )}
-
-        {isOwnListing && (
-          <div className="mt-4 rounded-xl border border-warm-200 bg-warm-50 p-4">
-            <p className="text-sm font-semibold text-warm-700">Manage this listing</p>
-            <p className="mt-1 text-xs text-warm-400">Update hours, photos, menu, and contact — changes stay saved in your Business Hub.</p>
-            <button
-              type="button"
-              onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-warm-600 px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              <Edit size={14} /> Edit &amp; save details
-            </button>
-          </div>
-        )}
-
-        <p className="mt-3 text-sm text-warm-400">{addressLabel(cafe)}</p>
-
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          {isOwnListing ? (
-            <>
-              <button
-                type="button"
-                onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-terracotta-500"
-              >
-                <Edit size={16} /> Edit listing
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/owner/dashboard")}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 font-semibold text-warm-600 transition hover:bg-warm-50"
-              >
-                Business Hub
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={handleDirections}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-terracotta-500"
-              >
-                <Navigation size={16} /> Go there
-              </button>
-              <button
-                type="button"
-                onClick={toggleSave}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 font-semibold text-warm-600 transition hover:bg-warm-50"
-              >
-                <Heart size={16} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
-                {saved ? "Saved" : "Save"}
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       {/* Tabs — spaced, scrollable on narrow screens */}
@@ -525,7 +406,7 @@ export default function CafeDetailPage() {
         </div>
       </div>
 
-      <div className="mt-6 w-full space-y-6 animate-fade-in" key={activeTab}>
+      <div className="mt-6 mb-8 w-full space-y-6 animate-fade-in" key={activeTab}>
         {activeTab === "Overview" && (
           <>
             {cafe.description && (
@@ -595,44 +476,29 @@ export default function CafeDetailPage() {
           </>
         )}
 
-        {activeTab === "Menu" && <MenuSection menu={cafe.menu} />}
+        {activeTab === "Menu" && (
+          cafe.menu?.length ? (
+            <MenuSection menu={cafe.menu} />
+          ) : (
+            <div className="rounded-xl border border-warm-100 bg-white p-8 text-center">
+              <p className="text-sm text-warm-400">No menu listed yet</p>
+            </div>
+          )
+        )}
 
         {activeTab === "Reviews" && (
-          <ReviewSection cafeId={String(cafe.id)} canWrite={!isOwnListing} />
+          <>
+            <div className="mb-4 flex items-center gap-2 text-sm">
+              <Star size={16} className="fill-gold-400 text-gold-400" />
+              <span className="font-bold text-warm-700">{cafe.rating}</span>
+              <span className="text-warm-400">· {cafe.reviewCount} reviews</span>
+            </div>
+            <ReviewSection cafeId={String(cafe.id)} canWrite={!isOwnListing} />
+          </>
         )}
 
         {activeTab === "Info" && (
           <div className="space-y-5">
-            <div>
-              <h3 className="mb-3 text-sm font-semibold text-warm-500">Amenities</h3>
-              <div className="flex flex-wrap gap-2">
-                {cafe.wifi && (
-                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">WiFi</span>
-                )}
-                {cafe.powerOutlets && (
-                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Charging</span>
-                )}
-                {cafe.petFriendly && (
-                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Pet Friendly</span>
-                )}
-                {cafe.parking && cafe.parking !== "none" && (
-                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Parking</span>
-                )}
-                {cafe.seating?.includes("Outdoor") && (
-                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Outdoor Seating</span>
-                )}
-                {cafe.seating?.includes("Garden") && (
-                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Garden</span>
-                )}
-                {cafe.seating?.includes("Rooftop") && (
-                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Rooftop</span>
-                )}
-                {cafe.lateNight && (
-                  <span className="rounded-full border border-warm-100 bg-white px-3 py-1.5 text-xs font-medium text-warm-600">Open Late</span>
-                )}
-              </div>
-            </div>
-
             <div className="space-y-3 rounded-xl border border-warm-100 bg-white p-5">
               {cafe.hours && (
                 <div className="flex items-center gap-3 text-sm text-warm-600">
@@ -673,56 +539,76 @@ export default function CafeDetailPage() {
                 <Flag size={14} /> Report this place
               </button>
             )}
-          </div>
-        )}
-      </div>
 
-      {/* Engagement CTA */}
-      <div className="mt-8 mb-4 space-y-3">
-        {isOwnListing ? (
-          <button
-            type="button"
-            onClick={() => navigate(`/owner/edit-cafe/${cafe.id}`)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 text-sm font-semibold text-white transition hover:bg-terracotta-500"
-          >
-            <Edit size={15} /> Edit &amp; save listing
-          </button>
-        ) : (
-          activeTab !== "Reviews" && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("Reviews")}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3.5 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
-            >
-              <Star size={15} className="text-gold-400" />
-              {user ? "Write a review" : "Read reviews"}
-            </button>
-          )
-        )}
-        {!isOwnListing && (
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={toggleSave}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
-            >
-              <Heart size={15} className={saved ? "fill-terracotta-400 text-terracotta-400" : ""} />
-              {saved ? "Saved" : "Save for later"}
-            </button>
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-600 transition hover:bg-warm-50"
-            >
-              <Share2 size={15} /> Share
-            </button>
+            {canClaim && (
+              <div className="rounded-xl border border-dashed border-warm-200 bg-warm-50 p-4">
+                <p className="text-sm font-semibold text-warm-700">Owner hasn&apos;t claimed this place</p>
+                <p className="mt-1 text-xs text-warm-400">Are you the owner or manager?</p>
+                {!claimOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      trackEvent("claim_start", { placeId: cafe.id, source: "detail" });
+                      setClaimOpen(true);
+                    }}
+                    className="mt-3 rounded-xl bg-warm-700 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Claim this business
+                  </button>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    <input
+                      value={claimPhone}
+                      onChange={(e) => setClaimPhone(e.target.value)}
+                      placeholder="Business phone"
+                      className="w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <textarea
+                      value={claimEvidence}
+                      onChange={(e) => setClaimEvidence(e.target.value)}
+                      placeholder="Brief evidence (Instagram, docs, etc.)"
+                      rows={2}
+                      className="w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      disabled={claimBusy}
+                      onClick={handleClaim}
+                      className="rounded-xl bg-warm-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      {claimBusy ? "Submitting…" : "Submit claim"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!isOwnListing && (
+              <div className="rounded-xl border border-warm-100 bg-white p-4">
+                <h3 className="mb-2 text-sm font-semibold text-warm-700">Is this still correct?</h3>
+                <p className="mb-3 text-xs text-warm-400">Location · Hours · Price · Menu</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={confirmBusy}
+                    onClick={() => handleConfirm(true)}
+                    className="rounded-full bg-sage-100 px-4 py-2 text-xs font-semibold text-sage-500"
+                  >
+                    ✓ Yes, looks right
+                  </button>
+                  <button
+                    type="button"
+                    disabled={confirmBusy}
+                    onClick={() => handleConfirm(false)}
+                    className="rounded-full bg-warm-100 px-4 py-2 text-xs font-semibold text-warm-600"
+                  >
+                    ✕ Something&apos;s off
+                  </button>
+                </div>
+                {confirmMsg && <p className="mt-2 text-xs text-warm-500">{confirmMsg}</p>}
+              </div>
+            )}
           </div>
-        )}
-        {!user && (
-          <p className="text-center text-xs text-warm-400">
-            <button type="button" onClick={() => navigate("/login")} className="font-semibold text-warm-600 underline">Sign in</button>
-            {" "}to save, review, and build your collection
-          </p>
         )}
       </div>
 
@@ -733,6 +619,12 @@ export default function CafeDetailPage() {
           onClose={() => setShowReport(false)}
         />
       )}
+      <SaveToCollectionSheet
+        open={saveSheetOpen}
+        userId={user?.uid}
+        placeId={cafe.id}
+        onClose={() => setSaveSheetOpen(false)}
+      />
     </div>
   );
 }

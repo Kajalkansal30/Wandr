@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Store, Clock, CheckCircle, XCircle, Edit, Heart, BarChart3, ArrowLeft, Rocket, Navigation, Phone, Share2, Eye, Shield, AlertTriangle, Ban } from "lucide-react";
+import { Plus, Store, Clock, CheckCircle, XCircle, Edit, Heart, BarChart3, Rocket, Navigation, Phone, Share2, Eye, Shield, AlertTriangle, Ban } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchMyPlaces } from "../../api/owner";
 import { fetchOwnerAnalytics, fetchMyBoosts } from "../../api/ownerAnalytics";
 import { FunnelChart, MetricBars, Sparkline, SourcePieList } from "../../components/owner/AnalyticsCharts";
 import { api } from "../../api/client";
+import OwnerTopBar from "../../components/OwnerTopBar";
 
 const statusConfig = {
   pending: { label: "Pending review", icon: Clock, color: "bg-gold-100 text-gold-500" },
@@ -130,29 +131,31 @@ export default function DashboardPage() {
 
   return (
     <div className="page-shell page-with-nav pt-6 md:pt-8">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-1.5 text-sm text-warm-500 transition hover:text-warm-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <OwnerTopBar
+        listingHint={
+          cafes.length === 0
+            ? null
+            : cafes.length === 1
+              ? `Managing ${cafes[0].name}`
+              : `${cafes.length} listings`
+        }
+      />
 
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-warm-400">Wandr</p>
-          <h1 className="text-2xl font-bold text-warm-700 md:text-3xl" style={{ fontFamily: "var(--font-display)" }}>
+          <h2 className="text-lg font-bold text-warm-700" style={{ fontFamily: "var(--font-display)" }}>
             Business Hub
-          </h1>
-          <p className="mt-1 text-sm text-warm-400 md:text-base">
+          </h2>
+          <p className="mt-0.5 text-sm text-warm-400">
             Discovery that measures interest — not vanity metrics
           </p>
         </div>
         <Link
           to="/owner/register-cafe"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-warm-600 shadow-md transition hover:bg-terracotta-500"
+          className="inline-flex items-center gap-1.5 rounded-full bg-warm-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-terracotta-500"
         >
-          <Plus size={20} className="text-white" />
+          <Plus size={18} />
+          <span className="hidden sm:inline">Add listing</span>
         </Link>
       </div>
 

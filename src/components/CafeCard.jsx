@@ -6,6 +6,8 @@ import { loadSavedIds, toggleSavedCafe } from "../utils/favorites";
 import { discoveryLabel, experienceTags, saveGrowthPct } from "../utils/discovery";
 import { trackEvent } from "../api/analytics";
 import { operatingLabel } from "../utils/placeStatus";
+import SaveToCollectionSheet from "./SaveToCollectionSheet";
+import { removePlaceFromAllCollections } from "../utils/collections";
 
 const KIND_STYLE = {
   new: { icon: Sparkles, classes: "wandr-new-accent" },
@@ -19,6 +21,7 @@ export default function CafeCard({ cafe, index = 0, featured = false }) {
   const [saved, setSaved] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [whyOpen, setWhyOpen] = useState(false);
+  const [saveSheetOpen, setSaveSheetOpen] = useState(false);
   const whyRef = useRef(null);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -76,6 +79,8 @@ export default function CafeCard({ cafe, index = 0, featured = false }) {
     setSaved(!prev);
     try {
       await toggleSavedCafe(user, cafe.id, prev);
+      if (!prev) setSaveSheetOpen(true);
+      else removePlaceFromAllCollections(user.uid, cafe.id);
     } catch {
       setSaved(prev);
     }
@@ -224,6 +229,12 @@ export default function CafeCard({ cafe, index = 0, featured = false }) {
           </div>
         )}
       </div>
+      <SaveToCollectionSheet
+        open={saveSheetOpen}
+        userId={user?.uid}
+        placeId={cafe.id}
+        onClose={() => setSaveSheetOpen(false)}
+      />
     </article>
   );
 }

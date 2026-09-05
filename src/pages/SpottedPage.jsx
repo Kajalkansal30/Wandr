@@ -10,6 +10,7 @@ import {
   Star,
   Plus,
   Bookmark,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { fetchSpottedFeed, toggleSpotLike, reportSpot } from "../api/spotted";
@@ -127,7 +128,7 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
   const dist = formatDistance(place?.distance);
 
   return (
-    <section className="relative h-[100dvh] w-full shrink-0 snap-start snap-always overflow-hidden bg-warm-800">
+    <section className="relative h-[100dvh] w-full shrink-0 snap-start snap-always overflow-hidden bg-warm-800 md:h-full">
       <video
         ref={videoRef}
         src={spot.url}
@@ -139,7 +140,7 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/35" />
 
-      <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-[max(5.5rem,env(safe-area-inset-bottom))] md:pb-8">
+      <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-[max(6.5rem,calc(5.5rem+env(safe-area-inset-bottom)))] md:pb-8">
         <div className="flex items-end gap-3">
           <div className="min-w-0 flex-1">
             {spot.caption && (
@@ -284,92 +285,113 @@ export default function SpottedPage() {
     return () => io.disconnect();
   }, [spots]);
 
-  return (
-    <div className="relative bg-warm-800">
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/50 to-transparent pt-[env(safe-area-inset-top)]">
-        <div className="pointer-events-auto page-shell flex items-center justify-between gap-3 py-3">
-          <div>
-            <h1 className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>
-              Spotted
-            </h1>
-            <p className="text-[11px] text-white/65">See what’s worth discovering around you</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate(user ? "/spotted/create" : "/login?next=/spotted/create")}
-            className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur"
-          >
-            <Plus size={14} /> Spot
-          </button>
-        </div>
-        <div className="pointer-events-auto page-shell flex gap-2 overflow-x-auto pb-3 scrollbar-none">
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-                filter === f.id
-                  ? f.id === "new"
-                    ? "wandr-new-accent"
-                    : "bg-warm-600 text-white"
-                  : "border border-white/25 bg-black/20 text-white/85"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
+  function goBack() {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/");
+  }
 
-      {loading ? (
-        <div className="flex h-[100dvh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-        </div>
-      ) : error ? (
-        <div className="flex h-[100dvh] flex-col items-center justify-center gap-3 px-6 text-center">
-          <p className="text-sm text-white/80">{error}</p>
-          <button type="button" onClick={load} className="rounded-full bg-warm-600 px-4 py-2 text-sm font-semibold text-white">
-            Retry
-          </button>
-        </div>
-      ) : spots.length === 0 ? (
-        <div className="flex h-[100dvh] flex-col items-center justify-center gap-4 px-6 text-center">
-          <p className="text-base font-semibold text-white">No spots yet</p>
-          <p className="max-w-xs text-sm text-white/65">
-            Be the first to share what’s happening at a café near you.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate(user ? "/spotted/create" : "/login?next=/spotted/create")}
-            className="rounded-full bg-warm-600 px-5 py-2.5 text-sm font-semibold text-white"
-          >
-            Create a Spot
-          </button>
-          <Link to="/" className="text-sm text-white/70 underline">
-            Back to Discover
-          </Link>
-        </div>
-      ) : (
-        <div
-          ref={scrollerRef}
-          className="h-[100dvh] snap-y snap-mandatory overflow-y-scroll scrollbar-none"
-        >
-          {spots.map((spot, i) => (
-            <div key={spot.id} data-spot-slide data-idx={i}>
-              <SpotSlide
-                spot={spot}
-                active={i === activeIdx}
-                muted={muted}
-                onToggleMute={() => setMuted((m) => !m)}
-                user={user}
-                savedIds={savedIds}
-                setSavedIds={setSavedIds}
-              />
+  return (
+    <div className="min-h-dvh bg-cream md:flex md:justify-center md:bg-warm-100 md:py-0">
+      {/* Phone-width column on desktop; full-bleed on mobile */}
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-warm-800 md:min-h-dvh md:shadow-2xl">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/55 to-transparent pt-[env(safe-area-inset-top)]">
+          <div className="pointer-events-auto flex items-center justify-between gap-3 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-black/50"
+                aria-label="Back"
+              >
+                <ArrowLeft size={18} />
+              </button>
+              <div className="min-w-0">
+                <Link to="/" className="block truncate text-lg font-bold text-white hover:opacity-90" style={{ fontFamily: "var(--font-display)" }}>
+                  Spotted
+                </Link>
+                <p className="truncate text-[11px] text-white/65">See what’s worth discovering around you</p>
+              </div>
             </div>
-          ))}
+            <button
+              type="button"
+              onClick={() => navigate(user ? "/spotted/create" : "/login?next=/spotted/create")}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur"
+            >
+              <Plus size={14} /> Spot
+            </button>
+          </div>
+          <div className="pointer-events-auto flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFilter(f.id)}
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                  filter === f.id
+                    ? f.id === "new"
+                      ? "wandr-new-accent"
+                      : "bg-warm-600 text-white"
+                    : "border border-white/25 bg-black/20 text-white/85"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+
+        {loading ? (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <p className="text-sm text-white/80">{error}</p>
+            <button type="button" onClick={load} className="rounded-full bg-warm-600 px-4 py-2 text-sm font-semibold text-white">
+              Retry
+            </button>
+            <Link to="/" className="text-sm text-white/70 underline">
+              Back to Discover
+            </Link>
+          </div>
+        ) : spots.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+            <p className="text-base font-semibold text-white">No spots yet</p>
+            <p className="max-w-xs text-sm text-white/65">
+              Be the first to share what’s happening at a café near you.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate(user ? "/spotted/create" : "/login?next=/spotted/create")}
+              className="rounded-full bg-warm-600 px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              Create a Spot
+            </button>
+            <Link to="/" className="text-sm text-white/70 underline">
+              Back to Discover
+            </Link>
+          </div>
+        ) : (
+          <div
+            ref={scrollerRef}
+            className="h-[100dvh] flex-1 snap-y snap-mandatory overflow-y-scroll scrollbar-none md:h-auto"
+          >
+            {spots.map((spot, i) => (
+              <div key={spot.id} data-spot-slide data-idx={i} className="md:h-full md:min-h-[100dvh]">
+                <SpotSlide
+                  spot={spot}
+                  active={i === activeIdx}
+                  muted={muted}
+                  onToggleMute={() => setMuted((m) => !m)}
+                  user={user}
+                  savedIds={savedIds}
+                  setSavedIds={setSavedIds}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

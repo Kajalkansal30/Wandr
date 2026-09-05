@@ -5,13 +5,18 @@ import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
 import CafeCard from "../components/CafeCard";
 import { loadSavedIds } from "../utils/favorites";
+import {
+  loadCollections,
+  createCollection,
+  deleteCollection,
+} from "../utils/collections";
 
-const DEFAULT_COLLECTIONS = [
-  { id: "want-to-visit", name: "Want to Visit", Icon: MapPin },
-  { id: "visited", name: "Visited", Icon: Check },
-  { id: "date-ideas", name: "Date Ideas", Icon: Heart },
-  { id: "study-spots", name: "Study Spots", Icon: BookOpen },
-];
+const ICONS = {
+  "want-to-visit": MapPin,
+  visited: Check,
+  "date-ideas": Heart,
+  "study-spots": BookOpen,
+};
 
 export default function SavedPage() {
   const navigate = useNavigate();
@@ -22,30 +27,33 @@ export default function SavedPage() {
   const [activeCollection, setActiveCollection] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
-  const [collections, setCollections] = useState(DEFAULT_COLLECTIONS);
+  const [collections, setCollections] = useState([]);
 
   useEffect(() => {
-    async function fetchSaved() {
-      if (!user) {
-        setSavedIds([]);
-        setLoading(false);
-        return;
-      }
-      try {
-        setSavedIds(await loadSavedIds(user));
-      } catch {
-        setSavedIds([]);
-      }
+    if (!user) {
+      setSavedIds([]);
+      setCollections([]);
       setLoading(false);
+      return;
     }
-    fetchSaved();
+    setCollections(loadCollections(user.uid));
+    loadSavedIds(user)
+      .then(setSavedIds)
+      .catch(() => setSavedIds([]))
+      .finally(() => setLoading(false));
   }, [user]);
 
   const savedCafes = places.filter((c) => savedIds.includes(String(c.id)));
+  const visibleCafes = (() => {
+    if (!activeCollection) return savedCafes;
+    const col = collections.find((c) => c.id === activeCollection);
+    if (!col) return savedCafes;
+    return savedCafes.filter((c) => col.placeIds.includes(String(c.id)));
+  })();
 
-  function createCollection() {
-    if (!newName.trim()) return;
-    setCollections((prev) => [...prev, { id: `custom-${Date.now()}`, name: newName.trim(), Icon: Folder }]);
+  function handleCreate() {
+    if (!newName.trim() || !user) return;
+    setCollections(createCollection(user.uid, newName.trim()));
     setNewName("");
     setShowCreate(false);
   }
@@ -69,10 +77,10 @@ export default function SavedPage() {
       </button>
 
       <h1 className="mb-2 text-2xl font-bold text-warm-700 md:text-3xl" style={{ fontFamily: "var(--font-display)" }}>
-        Places you want to discover
+        Saved
       </h1>
       <p className="mb-8 text-sm text-warm-400 md:text-base">
-        {savedCafes.length} {savedCafes.length === 1 ? "place" : "places"} saved
+        {savedCafes.length} {savedCafes.length === 1 ? "place" : "places"} in your library
       </p>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2 scrollbar-none">
@@ -88,7 +96,7 @@ export default function SavedPage() {
           All ({savedCafes.length})
         </button>
         {collections.map((col) => {
-          const Icon = col.Icon || Folder;
+          const Icon = ICONS[col.id] || Folder;
           return (
             <button
               key={col.id}
@@ -101,6 +109,7 @@ export default function SavedPage() {
               }`}
             >
               <Icon size={14} /> {col.name}
+              <span className="opacity-70">({col.placeIds.filter((id) => savedIds.includes(id)).length})</span>
             </button>
           );
         })}
@@ -113,6 +122,20 @@ export default function SavedPage() {
         </button>
       </div>
 
+      {activeCollection && activeCollection.startsWith("custom-") && (
+        <button
+          type="button"
+          onClick={() => {
+            if (!user) return;
+            setCollections(deleteCollection(user.uid, activeCollection));
+            setActiveCollection(null);
+          }}
+          className="mb-4 text-xs font-medium text-terracotta-500 hover:underline"
+        >
+          Delete this collection
+        </button>
+      )}
+
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm animate-scale-in rounded-2xl bg-white p-6 shadow-xl">
@@ -121,7 +144,7 @@ export default function SavedPage() {
               <button
                 type="button"
                 onClick={() => setShowCreate(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-warm-50 transition hover:bg-warm-100"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-warm-50"
               >
                 <X size={16} className="text-warm-500" />
               </button>
@@ -130,13 +153,13 @@ export default function SavedPage() {
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Collection name"
+              placeholder="e.g. Weekend brunch"
               className="mb-4 w-full rounded-xl border border-warm-200 px-4 py-3 text-warm-700"
-              onKeyDown={(e) => e.key === "Enter" && createCollection()}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             />
             <button
               type="button"
-              onClick={createCollection}
+              onClick={handleCreate}
               className="w-full rounded-xl bg-warm-600 py-3 font-semibold text-white transition hover:bg-terracotta-500"
             >
               Create
@@ -145,15 +168,21 @@ export default function SavedPage() {
         </div>
       )}
 
-      {savedCafes.length === 0 ? (
+      {visibleCafes.length === 0 ? (
         <div className="flex flex-col items-center py-16 text-center">
           <Heart size={40} className="mb-4 text-warm-200" />
-          <p className="font-medium text-warm-500">No saved places yet</p>
-          <p className="mt-1 text-sm text-warm-400">Tap the heart on any place to save it here</p>
+          <p className="font-medium text-warm-500">
+            {activeCollection ? "Nothing in this collection yet" : "No saved places yet"}
+          </p>
+          <p className="mt-1 text-sm text-warm-400">
+            {activeCollection
+              ? "Open a place and use Save to… to add it here"
+              : "Tap the heart on any place to save it"}
+          </p>
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {savedCafes.map((cafe, i) => (
+          {visibleCafes.map((cafe, i) => (
             <CafeCard key={cafe.id} cafe={cafe} index={i} />
           ))}
         </div>

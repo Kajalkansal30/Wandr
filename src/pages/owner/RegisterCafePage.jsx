@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Loader, AlertCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { createPlace } from "../../api/owner";
 import MapPinPicker from "../../components/MapPinPicker";
+import OwnerTopBar from "../../components/OwnerTopBar";
 
 const LOCATION_TYPES = [
   { id: "CAFE", label: "Café" },
@@ -175,6 +176,7 @@ export default function RegisterCafePage() {
 
   return (
     <div className="page-shell page-with-nav max-w-3xl pt-6">
+      <OwnerTopBar subtitle="Add a new place to Wandr" />
       <button
         type="button"
         onClick={() => (step > 0 ? setStep(step - 1) : navigate(-1))}

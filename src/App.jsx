@@ -4,7 +4,6 @@ import { PlacesProvider } from "./contexts/PlacesContext";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-import SplashPage from "./pages/SplashPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -24,24 +23,17 @@ import BoostPage from "./pages/owner/BoostPage";
 import AdminPage from "./pages/admin/AdminPage";
 import VerifyCafePage from "./pages/admin/VerifyCafePage";
 
-function HomeOrSplash() {
-  if (!localStorage.getItem("wandr_onboarded")) {
-    return <Navigate to="/welcome" replace />;
-  }
-  return <HomePage />;
-}
-
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <PlacesProvider>
           <Routes>
-            <Route path="welcome" element={<SplashPage />} />
+            <Route path="welcome" element={<Navigate to="/" replace />} />
             <Route path="map" element={<MapExplorePage />} />
 
             <Route element={<Layout />}>
-              <Route index element={<HomeOrSplash />} />
+              <Route index element={<HomePage />} />
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="cafe/:id" element={<CafeDetailPage />} />

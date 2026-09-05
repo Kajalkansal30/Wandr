@@ -4,6 +4,7 @@ import { ArrowLeft, Loader } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchMyPlace, updatePlace } from "../../api/owner";
 import MapPinPicker from "../../components/MapPinPicker";
+import OwnerTopBar from "../../components/OwnerTopBar";
 
 const categories = [
   "Specialty Coffee", "Brunch & Coffee", "Artisan Coffee",
@@ -112,6 +113,7 @@ export default function EditCafePage() {
 
   return (
     <div className="page-shell page-with-nav pt-6 max-w-3xl">
+      <OwnerTopBar subtitle="Update your listing" />
       <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1.5 text-sm text-warm-500 hover:text-warm-600 transition">
         <ArrowLeft size={16} /> Back
       </button>

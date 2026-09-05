@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, Store } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, Store, MapPin } from "lucide-react";
 
 const roles = [
   { id: "user", label: "I'm exploring", desc: "Discover, save & review", icon: User },
@@ -18,6 +18,28 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locationHint, setLocationHint] = useState("");
+
+  function requestLocation() {
+    if (!navigator.geolocation) {
+      setLocationHint("Location isn’t available on this device — you can still explore.");
+      return;
+    }
+    setLocating(true);
+    setLocationHint("");
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setLocationHint("We’ll use your area to show nearby places.");
+        setLocating(false);
+      },
+      () => {
+        setLocationHint("Skipped — you can explore without location.");
+        setLocating(false);
+      },
+      { timeout: 10000 }
+    );
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -28,6 +50,7 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
+      localStorage.setItem("wandr_onboarded", "1");
       await signup(email, password, name, selectedRole);
       navigate(selectedRole === "owner" ? "/owner/dashboard" : "/");
     } catch (err) {
@@ -65,7 +88,7 @@ export default function SignupPage() {
               className="h-14 w-auto object-contain drop-shadow-md sm:h-16"
             />
             <p className="mt-4 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">
-              Join the community discovering the best local spots.
+              Discover new cafés, hidden gems, and local food spots before everyone else.
             </p>
           </div>
         </div>
@@ -89,6 +112,23 @@ export default function SignupPage() {
                 {error}
               </div>
             )}
+
+            <div className="rounded-xl border border-warm-100 bg-white p-3">
+              <button
+                type="button"
+                onClick={requestLocation}
+                disabled={locating}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-warm-50 py-2.5 text-sm font-semibold text-warm-700 transition hover:bg-warm-100 disabled:opacity-60"
+              >
+                {locating ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-warm-300 border-t-warm-600" />
+                ) : (
+                  <MapPin size={16} className="text-warm-600" />
+                )}
+                Use my location
+              </button>
+              {locationHint && <p className="mt-2 text-center text-xs text-warm-400">{locationHint}</p>}
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               {roles.map((r) => {
