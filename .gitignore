@@ -27,4 +27,5 @@ dist-ssr
 backend/target/
 backend/.idea/
 .env
+backend/.env
 backend-tmp/

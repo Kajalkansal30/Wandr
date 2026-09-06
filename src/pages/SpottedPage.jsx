@@ -132,6 +132,7 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
       <video
         ref={videoRef}
         src={spot.url}
+        poster={spot.thumbnailUrl || undefined}
         className="absolute inset-0 h-full w-full object-cover"
         playsInline
         loop

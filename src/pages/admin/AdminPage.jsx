@@ -212,7 +212,7 @@ export default function AdminPage() {
               return (
               <div key={m.id} className="overflow-hidden rounded-xl border border-warm-100 bg-white">
                 {isVideo ? (
-                  <video src={m.url} controls playsInline className="aspect-video w-full bg-warm-800 object-cover" />
+                  <video src={m.url} poster={m.thumbnailUrl || undefined} controls playsInline className="aspect-video w-full bg-warm-800 object-cover" />
                 ) : (
                   <img src={m.url} alt="" className="aspect-video w-full object-cover" />
                 )}

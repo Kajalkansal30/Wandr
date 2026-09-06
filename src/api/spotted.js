@@ -81,6 +81,7 @@ export async function createSpot(body) {
     return addDemoSpot({
       placeId: body.placeId,
       url: body.url,
+      thumbnailUrl: body.thumbnailUrl,
       caption: body.caption,
       spotKind: body.spotKind,
     });

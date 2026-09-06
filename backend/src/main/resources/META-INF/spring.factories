@@ -1,2 +1,3 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
+com.wandr.config.DotEnvEnvironmentPostProcessor,\
 com.wandr.config.DatabaseUrlEnvironmentPostProcessor

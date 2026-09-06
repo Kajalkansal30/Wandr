@@ -367,6 +367,7 @@ export default function CafeDetailPage() {
                 >
                   <video
                     src={s.url}
+                    poster={s.thumbnailUrl || undefined}
                     muted
                     playsInline
                     preload="metadata"

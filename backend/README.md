@@ -60,7 +60,11 @@ POST /api/owner/boosts       { "placeId", "targetRadiusKm", "audiences", "budget
 GET  /api/admin/places?status=PENDING
 POST /api/admin/places/{id}/approve
 POST /api/admin/places/{id}/reject
+POST /api/media/cloudinary-sign   (Bearer token — returns signed Cloudinary upload params)
+POST /api/spotted                 (Bearer token — JSON { placeId, url, thumbnailUrl?, caption?, spotKind })
 ```
+
+Cloudinary: set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (see `backend/.env.example`). Media binaries stay in Cloudinary; Postgres stores URLs only.
 
 Analytics events are collected now (place_view, save_place, direction_click, boost_impression, etc.). Owner **Business Hub** charts aggregate them. **Boost** creates clearly labeled Sponsored slots (never buys verification). Restart the API after pull so new tables are created (`ddl-auto: update`).
 

@@ -33,6 +33,7 @@ export default function CreateSpotPage() {
   const [file, setFile] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploadPct, setUploadPct] = useState(null);
   const [done, setDone] = useState(null);
 
   const matches = useMemo(() => {
@@ -64,25 +65,36 @@ export default function CreateSpotPage() {
     }
 
     setLoading(true);
+    setUploadPct(null);
     try {
       let videoUrl = url.trim();
+      let thumbnailUrl = null;
       if (file && canUpload) {
-        videoUrl = await uploadSpotFile(file, user?.uid || user?.id);
+        setUploadPct(0);
+        const uploaded = await uploadSpotFile(file, user?.uid || user?.id, {
+          onProgress: setUploadPct,
+        });
+        videoUrl = uploaded.url;
+        thumbnailUrl = uploaded.thumbnailUrl;
       }
       if (!videoUrl) {
         setError(canUpload ? "Add a video file or paste a URL." : "Paste a video URL to continue.");
         setLoading(false);
+        setUploadPct(null);
         return;
       }
-      if (!/^https?:\/\//i.test(videoUrl)) {
-        setError("Video URL must start with http:// or https://");
+      if (!/^https:\/\//i.test(videoUrl)) {
+        setError("Video URL must start with https://");
         setLoading(false);
+        setUploadPct(null);
         return;
       }
 
+      setUploadPct(null);
       const spot = await createSpot({
         placeId: Number(placeId),
         url: videoUrl,
+        thumbnailUrl,
         caption: caption.trim() || null,
         spotKind,
       });
@@ -91,6 +103,7 @@ export default function CreateSpotPage() {
       setError(err.message || "Could not publish spot");
     } finally {
       setLoading(false);
+      setUploadPct(null);
     }
   }
 
@@ -228,7 +241,7 @@ export default function CreateSpotPage() {
           />
           {!canUpload && (
             <p className="mt-1.5 text-xs text-warm-400">
-              File upload needs Firebase Storage — paste a URL for now.
+              File upload needs Cloudinary — paste a URL for now.
             </p>
           )}
         </div>
@@ -238,10 +251,33 @@ export default function CreateSpotPage() {
             <label className="mb-1.5 block text-sm font-medium text-warm-600">Or upload a file</label>
             <input
               type="file"
-              accept="video/*"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              accept="video/mp4,video/webm,video/quicktime,video/*"
+              onChange={(e) => {
+                setFile(e.target.files?.[0] || null);
+                setUploadPct(null);
+              }}
               className="w-full text-sm text-warm-500"
             />
+            {file && (
+              <p className="mt-1.5 truncate text-xs text-warm-400">
+                {file.name} · {(file.size / (1024 * 1024)).toFixed(1)} MB
+              </p>
+            )}
+          </div>
+        )}
+
+        {uploadPct != null && (
+          <div>
+            <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-warm-500">
+              <span>Uploading to Cloudinary…</span>
+              <span>{uploadPct}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-warm-100">
+              <div
+                className="h-full rounded-full bg-[#EF6F61] transition-[width] duration-200"
+                style={{ width: `${uploadPct}%` }}
+              />
+            </div>
           </div>
         )}
 
@@ -250,7 +286,14 @@ export default function CreateSpotPage() {
           disabled={loading}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white transition hover:bg-terracotta-500 disabled:opacity-60"
         >
-          {loading ? <Loader size={18} className="animate-spin" /> : "Publish"}
+          {loading ? (
+            <>
+              <Loader size={18} className="animate-spin" />
+              {uploadPct != null ? `Uploading ${uploadPct}%` : "Publishing…"}
+            </>
+          ) : (
+            "Publish"
+          )}
         </button>
       </form>
     </div>

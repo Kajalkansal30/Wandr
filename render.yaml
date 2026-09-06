@@ -1,5 +1,6 @@
 # Wandr on Render — API (Docker) + static frontend
-# Database: Neon Postgres (set DATABASE_URL in the dashboard)
+# Database: Supabase Postgres (set DATABASE_URL in the dashboard)
+# Media: Cloudinary (signed uploads via Spring)
 # https://render.com/docs/blueprint-spec
 
 services:
@@ -12,8 +13,7 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
     envVars:
-      # Paste Neon connection string in Render dashboard after create
-      # Prefer Neon's "direct" host (ep-....neon.tech), not the -pooler host, for Spring/JPA
+      # Paste Supabase direct Postgres URI (Session mode / non-pooler preferred for JPA)
       - key: DATABASE_URL
         sync: false
       - key: WANDR_JWT_SECRET
@@ -22,6 +22,12 @@ services:
         value: update
       - key: WANDR_CORS_ORIGINS
         value: https://wandr-web.onrender.com,http://localhost:*,http://127.0.0.1:*,https://*.onrender.com
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
 
   # Static sites have no plan field (always free bandwidth-wise)
   - type: web
@@ -34,6 +40,10 @@ services:
       # Full URL required — Render "host" alone can omit .onrender.com and break the build
       - key: VITE_API_URL
         value: https://wandr-api-d59o.onrender.com
+      - key: VITE_CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: VITE_CLOUDINARY_API_KEY
+        sync: false
       - key: NODE_VERSION
         value: "20"
     routes:

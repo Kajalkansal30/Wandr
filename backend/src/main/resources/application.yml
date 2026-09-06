@@ -24,6 +24,10 @@ wandr:
   cors:
     # Comma-separated origins/patterns. Exact Render web + local Vite.
     allowed-origin-patterns: ${WANDR_CORS_ORIGINS:https://wandr-web.onrender.com,http://localhost:*,http://127.0.0.1:*,https://*.onrender.com}
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
 
 logging:
   level:

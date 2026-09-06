@@ -1,4 +1,4 @@
-/** Demo Spotted videos when API/DB is unavailable (URL-first, no Firebase). */
+/** Demo Spotted videos when API/DB is unavailable (URL-first, media binaries live in Cloudinary). */
 import mockCafes from "./cafes";
 
 const SAMPLE_VIDEOS = [
@@ -142,13 +142,13 @@ export function getDemoSpotsForPlace(placeId) {
   return getDemoSpots().filter((s) => String(s.placeId) === String(placeId));
 }
 
-export function addDemoSpot({ placeId, url, caption, spotKind, place }) {
+export function addDemoSpot({ placeId, url, thumbnailUrl, caption, spotKind, place }) {
   const spot = {
     id: `demo-spot-${Date.now()}`,
     placeId: String(placeId),
     userId: null,
     url,
-    thumbnailUrl: null,
+    thumbnailUrl: thumbnailUrl || null,
     mediaType: "VIDEO",
     spotKind,
     caption,

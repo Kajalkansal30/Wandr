@@ -95,9 +95,10 @@ public class SpottedService {
     if (req.url() == null || req.url().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "url is required");
     }
-    String url = req.url().trim();
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "url must be http(s)");
+    String url = requireHttpsUrl(req.url().trim(), "url");
+    String thumbnailUrl = blankToNull(req.thumbnailUrl());
+    if (thumbnailUrl != null) {
+      thumbnailUrl = requireHttpsUrl(thumbnailUrl, "thumbnailUrl");
     }
 
     Place place = placeRepository.findByIdWithOwner(req.placeId())
@@ -117,7 +118,7 @@ public class SpottedService {
         .placeId(place.getId())
         .userId(user.getId())
         .url(url)
-        .thumbnailUrl(blankToNull(req.thumbnailUrl()))
+        .thumbnailUrl(thumbnailUrl)
         .mediaType(MediaType.VIDEO)
         .spotKind(kind)
         .caption(blankToNull(req.caption()))
@@ -194,6 +195,14 @@ public class SpottedService {
     if (s == null) return null;
     String t = s.trim();
     return t.isEmpty() ? null : t;
+  }
+
+  /** Media binaries live in Cloudinary (or any https host); never store blobs in Postgres. */
+  private static String requireHttpsUrl(String url, String field) {
+    if (!url.startsWith("https://")) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " must be an https URL");
+    }
+    return url;
   }
 
   private record Scored(PlaceMedia media, Place place, Double distance, double score) {}

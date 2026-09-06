@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { createPlace } from "../../api/owner";
 import MapPinPicker from "../../components/MapPinPicker";
 import OwnerTopBar from "../../components/OwnerTopBar";
+import { isCloudinaryUploadAvailable, uploadPlaceCover } from "../../utils/uploadSpot";
 
 const LOCATION_TYPES = [
   { id: "CAFE", label: "Café" },
@@ -45,8 +46,10 @@ export default function RegisterCafePage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadPct, setUploadPct] = useState(null);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(false);
+  const canUpload = isCloudinaryUploadAvailable();
   const [form, setForm] = useState({
     locationType: "",
     name: "",
@@ -296,8 +299,53 @@ export default function RegisterCafePage() {
         <div className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-warm-600">Cover image URL</label>
-            <input value={form.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} placeholder="https://…" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+            <input
+              value={form.imageUrl}
+              onChange={(e) => update("imageUrl", e.target.value)}
+              placeholder="https://…"
+              className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3"
+            />
+            {!canUpload && (
+              <p className="mt-1.5 text-xs text-warm-400">
+                File upload needs Cloudinary — paste a URL for now.
+              </p>
+            )}
           </div>
+          {canUpload && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-warm-600">Or upload a photo</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/*"
+                disabled={submitting}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  setUploadPct(0);
+                  try {
+                    const url = await uploadPlaceCover(file, { onProgress: setUploadPct });
+                    update("imageUrl", url);
+                  } catch (err) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      imageUrl: err.message || "Upload failed",
+                    }));
+                  } finally {
+                    setUploadPct(null);
+                  }
+                }}
+                className="w-full text-sm text-warm-500"
+              />
+              {uploadPct != null && (
+                <p className="mt-1.5 text-xs text-warm-400">Uploading {uploadPct}%…</p>
+              )}
+            </div>
+          )}
+          {form.imageUrl && (
+            <img src={form.imageUrl} alt="" className="h-40 w-full rounded-xl object-cover" />
+          )}
+          <FieldError message={errors.imageUrl} />
           <div>
             <label className="mb-1.5 block text-sm font-medium text-warm-600">
               Description <span className="text-terracotta-500">*</span>

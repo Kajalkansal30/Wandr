@@ -49,6 +49,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.POST, "/api/analytics/events").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/places", "/api/places/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/spotted/feed").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/media/cloudinary-sign").authenticated()
             .requestMatchers(HttpMethod.POST, "/api/spotted").authenticated()
             .requestMatchers(HttpMethod.POST, "/api/spotted/*/like").authenticated()
             .requestMatchers(HttpMethod.POST, "/api/spotted/*/report").authenticated()
