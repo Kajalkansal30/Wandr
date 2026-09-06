@@ -78,8 +78,9 @@ public class SecurityConfig {
             .requestMatchers("/api/owner/**").hasAnyRole("OWNER", "ADMIN")
             .anyRequest().authenticated()
         )
-        .addFilterBefore(rateLimitFilter, JwtAuthFilter.class)
-        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        // Register JWT first so RateLimitFilter can anchor before it (Spring Security 6.4+)
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(rateLimitFilter, JwtAuthFilter.class);
 
     return http.build();
   }
