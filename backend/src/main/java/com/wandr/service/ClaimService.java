@@ -109,8 +109,11 @@ public class ClaimService {
         claimant.getId(),
         "CLAIM_APPROVED",
         "Claim approved",
-        "You now manage " + place.getName() + " on Wandr.",
-        String.valueOf(place.getId())
+        "Your claim for " + place.getName() + " was approved.",
+        "PLACE",
+        place.getId(),
+        "{\"claimId\":" + claimId + "}",
+        "claim-approved:" + claimId
     );
     return ClaimDtos.ClaimResponse.from(claim, place.getName());
   }
@@ -140,7 +143,10 @@ public class ClaimService {
         "CLAIM_REJECTED",
         "Claim not approved",
         "Your claim for " + place.getName() + " was rejected.",
-        String.valueOf(place.getId())
+        "PLACE",
+        place.getId(),
+        "{\"claimId\":" + claimId + "}",
+        "claim-rejected:" + claimId
     );
     return ClaimDtos.ClaimResponse.from(claim, place.getName());
   }

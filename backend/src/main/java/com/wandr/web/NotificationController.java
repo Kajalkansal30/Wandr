@@ -19,11 +19,13 @@ public class NotificationController {
 
   @GetMapping
   public List<NotificationDtos.NotificationResponse> list(@AuthenticationPrincipal User user) {
+    requireUser(user);
     return notificationService.list(user.getId());
   }
 
   @GetMapping("/unread-count")
   public NotificationDtos.UnreadCountResponse unreadCount(@AuthenticationPrincipal User user) {
+    requireUser(user);
     return new NotificationDtos.UnreadCountResponse(notificationService.unreadCount(user.getId()));
   }
 
@@ -32,16 +34,21 @@ public class NotificationController {
       @AuthenticationPrincipal User user,
       @PathVariable Long id
   ) {
+    requireUser(user);
     return notificationService.markRead(user.getId(), id);
   }
 
   @PostMapping("/read-all")
   public AuthDtos.MessageResponse markAllRead(@AuthenticationPrincipal User user) {
+    requireUser(user);
+    int marked = notificationService.markAllRead(user.getId());
+    return new AuthDtos.MessageResponse("Marked " + marked + " as read");
+  }
+
+  private static void requireUser(User user) {
     if (user == null) {
       throw new org.springframework.web.server.ResponseStatusException(
           org.springframework.http.HttpStatus.UNAUTHORIZED, "Login required");
     }
-    int marked = notificationService.markAllRead(user.getId());
-    return new AuthDtos.MessageResponse("Marked " + marked + " as read");
   }
 }

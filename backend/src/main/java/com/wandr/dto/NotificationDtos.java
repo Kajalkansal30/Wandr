@@ -12,6 +12,9 @@ public class NotificationDtos {
       String title,
       String message,
       String data,
+      String entityType,
+      Long entityId,
+      String metadata,
       Instant readAt,
       Instant createdAt
   ) {
@@ -22,6 +25,9 @@ public class NotificationDtos {
           n.getTitle(),
           n.getMessage(),
           n.getData(),
+          n.getEntityType(),
+          n.getEntityId(),
+          n.getMetadata(),
           n.getReadAt(),
           n.getCreatedAt()
       );

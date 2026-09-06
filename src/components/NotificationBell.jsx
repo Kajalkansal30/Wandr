@@ -1,10 +1,18 @@
 import { useEffect, useState, useRef } from "react";
 import { Bell } from "lucide-react";
-import { fetchNotifications, markNotificationRead, markAllNotificationsRead } from "../api/notifications";
+import { useNavigate } from "react-router-dom";
+import {
+  fetchNotifications,
+  fetchUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../api/notifications";
 import { useAuth } from "../contexts/AuthContext";
+import { formatNotificationTime, notificationHref } from "../utils/notifications";
 
 export default function NotificationBell() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -13,14 +21,29 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    fetchUnreadCount()
+      .then((res) => {
+        if (!cancelled) setUnread(Number(res?.unread || 0));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user, open]);
+
+  useEffect(() => {
+    if (!user || !open) return;
+    let cancelled = false;
     fetchNotifications()
       .then((list) => {
         if (cancelled) return;
-        setItems(list || []);
+        setItems((list || []).slice(0, 8));
         setUnread((list || []).filter((n) => !n.readAt).length);
       })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user, open]);
 
   useEffect(() => {
@@ -33,14 +56,20 @@ export default function NotificationBell() {
 
   if (!user) return null;
 
-  async function onRead(id) {
+  async function onOpenItem(n) {
     try {
-      await markNotificationRead(id);
-      setItems((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
-      setUnread((u) => Math.max(0, u - 1));
+      if (!n.readAt) {
+        await markNotificationRead(n.id);
+        setItems((prev) =>
+          prev.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x))
+        );
+        setUnread((u) => Math.max(0, u - 1));
+      }
     } catch {
       /* ignore */
     }
+    setOpen(false);
+    navigate(notificationHref(n));
   }
 
   async function onReadAll() {
@@ -86,15 +115,26 @@ export default function NotificationBell() {
               <li key={n.id}>
                 <button
                   type="button"
-                  onClick={() => onRead(n.id)}
+                  onClick={() => onOpenItem(n)}
                   className={`block w-full px-3 py-2.5 text-left transition hover:bg-warm-50 ${n.readAt ? "opacity-70" : ""}`}
                 >
                   <p className="text-sm font-medium text-warm-700">{n.title}</p>
                   <p className="mt-0.5 text-xs text-warm-400">{n.message}</p>
+                  <p className="mt-1 text-[11px] text-warm-300">{formatNotificationTime(n.createdAt)}</p>
                 </button>
               </li>
             ))}
           </ul>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate("/notifications");
+            }}
+            className="block w-full border-t border-warm-100 px-3 py-2.5 text-center text-xs font-semibold text-warm-600 hover:bg-warm-50"
+          >
+            View all
+          </button>
         </div>
       )}
     </div>

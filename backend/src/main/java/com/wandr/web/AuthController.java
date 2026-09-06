@@ -106,6 +106,18 @@ public class AuthController {
     return new AuthDtos.MessageResponse("Logged out everywhere");
   }
 
+  @DeleteMapping("/account")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteAccount(
+      @AuthenticationPrincipal User user,
+      @Valid @RequestBody AuthDtos.DeleteAccountRequest request,
+      HttpServletResponse response
+  ) {
+    requireUser(user);
+    authService.deleteAccount(user, request.password());
+    clearRefreshCookie(response);
+  }
+
   private void setRefreshCookie(HttpServletResponse response, String rawToken) {
     boolean secure = webBaseUrl != null && webBaseUrl.startsWith("https");
     ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE, rawToken)

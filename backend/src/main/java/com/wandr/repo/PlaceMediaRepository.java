@@ -18,4 +18,8 @@ public interface PlaceMediaRepository extends JpaRepository<PlaceMedia, Long> {
   List<PlaceMedia> findByStatusAndMediaTypeOrderByCreatedAtDesc(MediaStatus status, MediaType mediaType);
 
   long countByStatus(MediaStatus status);
+
+  @org.springframework.data.jpa.repository.Modifying
+  @org.springframework.data.jpa.repository.Query("UPDATE PlaceMedia m SET m.userId = null WHERE m.userId = :userId")
+  int clearUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
 }

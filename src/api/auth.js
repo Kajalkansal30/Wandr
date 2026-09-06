@@ -70,6 +70,22 @@ export async function resetPasswordRequest(token, newPassword) {
   });
 }
 
+export async function changePasswordRequest(oldPassword, newPassword) {
+  return api("/api/auth/change-password", {
+    method: "POST",
+    auth: true,
+    body: { oldPassword, newPassword },
+  });
+}
+
+export async function deleteAccountRequest(password) {
+  return api("/api/auth/account", {
+    method: "DELETE",
+    auth: true,
+    body: { password },
+  });
+}
+
 export async function tryRefreshSession() {
   const data = await refreshAccessToken();
   return data;

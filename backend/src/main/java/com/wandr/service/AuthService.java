@@ -29,6 +29,8 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final EmailService emailService;
+  private final NotificationService notificationService;
+  private final AccountDeletionService accountDeletionService;
 
   @Value("${wandr.jwt.refresh-expiration-ms:604800000}")
   private long refreshExpirationMs;
@@ -57,7 +59,7 @@ public class AuthService {
         .build();
     userRepository.save(user);
     emailService.sendVerification(user.getEmail(), verificationToken);
-    return issueAuth(user);
+    return issueAuth(user, false);
   }
 
   @Transactional
@@ -67,7 +69,8 @@ public class AuthService {
     if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
     }
-    return issueAuth(user);
+    boolean returning = refreshTokenRepository.countByUserId(user.getId()) > 0;
+    return issueAuth(user, returning);
   }
 
   @Transactional
@@ -119,6 +122,7 @@ public class AuthService {
     user.setPasswordResetExpiresAt(null);
     userRepository.save(user);
     refreshTokenRepository.revokeAllByUserId(user.getId(), Instant.now());
+    notifyPasswordChanged(user);
     return new AuthDtos.MessageResponse("Password updated");
   }
 
@@ -130,7 +134,13 @@ public class AuthService {
     user.setPasswordHash(passwordEncoder.encode(newPassword));
     userRepository.save(user);
     refreshTokenRepository.revokeAllByUserId(user.getId(), Instant.now());
+    notifyPasswordChanged(user);
     return new AuthDtos.MessageResponse("Password changed");
+  }
+
+  @Transactional
+  public void deleteAccount(User user, String password) {
+    accountDeletionService.deleteAccount(user, password);
   }
 
   @Transactional
@@ -151,7 +161,7 @@ public class AuthService {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 
     refreshTokenRepository.revokeById(stored.getId(), Instant.now());
-    return issueAuth(user);
+    return issueAuth(user, false);
   }
 
   @Transactional
@@ -167,9 +177,42 @@ public class AuthService {
     refreshTokenRepository.revokeAllByUserId(userId, Instant.now());
   }
 
-  private AuthResult issueAuth(User user) {
+  private void notifyPasswordChanged(User user) {
+    String eventId = "password-changed:" + user.getId() + ":" + Instant.now().getEpochSecond();
+    notificationService.create(
+        user.getId(),
+        "PASSWORD_CHANGED",
+        "Password changed",
+        "Your Wandr password was successfully changed.",
+        "USER",
+        user.getId(),
+        null,
+        eventId
+    );
+    emailService.sendPasswordChanged(user.getEmail());
+  }
+
+  private void notifyNewLogin(User user) {
+    String eventId = "new-login:" + user.getId() + ":" + Instant.now().getEpochSecond() / 3600;
+    notificationService.create(
+        user.getId(),
+        "NEW_LOGIN",
+        "New sign-in",
+        "Your Wandr account was accessed from a new sign-in.",
+        "USER",
+        user.getId(),
+        null,
+        eventId
+    );
+    emailService.sendNewLogin(user.getEmail());
+  }
+
+  private AuthResult issueAuth(User user, boolean notifyNewLogin) {
     String access = jwtService.generate(user.getId(), user.getEmail(), user.getRole().name());
     String refresh = createRefreshToken(user.getId());
+    if (notifyNewLogin) {
+      notifyNewLogin(user);
+    }
     AuthDtos.AuthResponse response = new AuthDtos.AuthResponse(
         access,
         user.getId(),

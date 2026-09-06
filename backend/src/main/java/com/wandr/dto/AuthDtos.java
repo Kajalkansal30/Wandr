@@ -44,5 +44,7 @@ public class AuthDtos {
       @NotBlank @Size(min = 6) String newPassword
   ) {}
 
+  public record DeleteAccountRequest(@NotBlank String password) {}
+
   public record RefreshResponse(String token, boolean emailVerified) {}
 }

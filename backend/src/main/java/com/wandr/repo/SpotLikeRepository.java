@@ -15,4 +15,8 @@ public interface SpotLikeRepository extends JpaRepository<SpotLike, Long> {
   List<SpotLike> findByUserIdAndMediaIdIn(Long userId, Collection<Long> mediaIds);
 
   void deleteByUserIdAndMediaId(Long userId, Long mediaId);
+
+  @org.springframework.data.jpa.repository.Modifying
+  @org.springframework.data.jpa.repository.Query("DELETE FROM SpotLike s WHERE s.userId = :userId")
+  int deleteByUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
 }

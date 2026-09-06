@@ -60,7 +60,17 @@ public class SecurityConfig {
             .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
             .requestMatchers("/error").permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            .requestMatchers("/api/auth/**", "/api/health").permitAll()
+            .requestMatchers("/api/health").permitAll()
+            .requestMatchers(
+                HttpMethod.POST,
+                "/api/auth/login",
+                "/api/auth/signup",
+                "/api/auth/forgot-password",
+                "/api/auth/reset-password",
+                "/api/auth/verify-email",
+                "/api/auth/refresh",
+                "/api/auth/logout"
+            ).permitAll()
             .requestMatchers(HttpMethod.POST, "/api/analytics/events").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/places", "/api/places/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/spotted/feed").permitAll()

@@ -4,6 +4,10 @@ export async function fetchNotifications() {
   return api("/api/notifications", { auth: true });
 }
 
+export async function fetchUnreadCount() {
+  return api("/api/notifications/unread-count", { auth: true });
+}
+
 export async function markNotificationRead(id) {
   return api(`/api/notifications/${id}/read`, { method: "POST", auth: true });
 }

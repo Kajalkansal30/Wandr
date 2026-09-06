@@ -13,4 +13,8 @@ public interface PlaceClaimRepository extends JpaRepository<PlaceClaim, Long> {
   List<PlaceClaim> findByUserIdOrderByCreatedAtDesc(Long userId);
   Optional<PlaceClaim> findFirstByPlaceIdAndUserIdAndStatus(Long placeId, Long userId, ClaimStatus status);
   long countByStatus(ClaimStatus status);
+
+  @org.springframework.data.jpa.repository.Modifying
+  @org.springframework.data.jpa.repository.Query("DELETE FROM PlaceClaim c WHERE c.userId = :userId")
+  int deleteByUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
 }

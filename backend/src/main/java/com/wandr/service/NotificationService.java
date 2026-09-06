@@ -18,16 +18,38 @@ public class NotificationService {
 
   private final NotificationRepository notificationRepository;
 
+  /**
+   * Idempotent create when {@code sourceEventId} is set: same user+type+event skips duplicates.
+   */
   @Transactional
   public NotificationDtos.NotificationResponse create(
-      Long userId, String type, String title, String message, String data
+      Long userId,
+      String type,
+      String title,
+      String message,
+      String entityType,
+      Long entityId,
+      String metadata,
+      String sourceEventId
   ) {
+    if (sourceEventId != null && !sourceEventId.isBlank()) {
+      var existing = notificationRepository.findByUserIdAndTypeAndSourceEventId(userId, type, sourceEventId);
+      if (existing.isPresent()) {
+        return NotificationDtos.NotificationResponse.from(existing.get());
+      }
+    }
+
+    String legacyData = entityId == null ? null : String.valueOf(entityId);
     Notification n = notificationRepository.save(Notification.builder()
         .userId(userId)
         .type(type)
         .title(title)
         .message(message)
-        .data(data)
+        .data(legacyData)
+        .entityType(entityType)
+        .entityId(entityId)
+        .metadata(metadata)
+        .sourceEventId(sourceEventId)
         .build());
     return NotificationDtos.NotificationResponse.from(n);
   }

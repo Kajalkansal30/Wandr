@@ -32,8 +32,19 @@ public class Notification {
   @Column(nullable = false, length = 1000)
   private String message;
 
+  /** Legacy payload; prefer entityType/entityId/metadata. */
   @Column(length = 2000)
   private String data;
+
+  private String entityType;
+
+  private Long entityId;
+
+  @Column(length = 2000)
+  private String metadata;
+
+  @Column(length = 128)
+  private String sourceEventId;
 
   private Instant readAt;
 

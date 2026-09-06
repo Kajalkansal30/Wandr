@@ -25,7 +25,7 @@ public class Review {
   @Column(nullable = false)
   private Long placeId;
 
-  @Column(nullable = false)
+  /** Null when the author deleted their account (review kept anonymized). */
   private Long userId;
 
   private String userDisplayName;

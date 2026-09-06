@@ -50,6 +50,22 @@ public class EmailService {
     sendSimple(to, "Reset your Wandr password", html);
   }
 
+  public void sendPasswordChanged(String to) {
+    String html = """
+        <p>Your Wandr password was successfully changed.</p>
+        <p>If you did not make this change, reset your password immediately and contact support.</p>
+        """;
+    sendSimple(to, "Your Wandr password was changed", html);
+  }
+
+  public void sendNewLogin(String to) {
+    String html = """
+        <p>Your Wandr account was accessed from a new sign-in.</p>
+        <p>If this was you, no action is needed. If not, reset your password right away.</p>
+        """;
+    sendSimple(to, "New sign-in on your Wandr account", html);
+  }
+
   public void sendSimple(String to, String subject, String html) {
     if (resendApiKey.isBlank()) {
       log.info("Email (dev/no Resend key) to={} subject={} html={}", to, subject, html);

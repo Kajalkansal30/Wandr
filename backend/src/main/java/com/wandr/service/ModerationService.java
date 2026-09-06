@@ -74,10 +74,13 @@ public class ModerationService {
     if (place.getOwner() != null) {
       notificationService.create(
           place.getOwner().getId(),
-          "CAFE_APPROVED",
-          "Your café was approved",
+          "LISTING_APPROVED",
+          "Listing approved",
           place.getName() + " is now live on Wandr.",
-          String.valueOf(placeId)
+          "PLACE",
+          placeId,
+          null,
+          "listing-approved:" + placeId
       );
     }
     return PlaceDtos.PlaceResponse.from(place, null);
@@ -91,12 +94,16 @@ public class ModerationService {
     placeService.save(place);
     log(admin, placeId, null, null, ModerationActionType.REJECT, req);
     if (place.getOwner() != null) {
+      String note = req != null && req.note() != null ? " " + req.note() : "";
       notificationService.create(
           place.getOwner().getId(),
-          "CAFE_REJECTED",
-          "Listing needs changes",
-          place.getName() + " was not approved." + (req != null && req.note() != null ? " " + req.note() : ""),
-          String.valueOf(placeId)
+          "LISTING_REJECTED",
+          "Listing rejected",
+          place.getName() + " was not approved." + note,
+          "PLACE",
+          placeId,
+          null,
+          "listing-rejected:" + placeId
       );
     }
     return PlaceDtos.PlaceResponse.from(place, null);

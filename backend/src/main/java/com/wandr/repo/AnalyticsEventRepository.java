@@ -53,4 +53,8 @@ public interface AnalyticsEventRepository extends JpaRepository<AnalyticsEvent, 
       @Param("placeIds") Collection<Long> placeIds,
       @Param("from") Instant from
   );
+
+  @org.springframework.data.jpa.repository.Modifying
+  @Query("UPDATE AnalyticsEvent e SET e.userId = null WHERE e.userId = :userId")
+  int clearUserId(@Param("userId") Long userId);
 }

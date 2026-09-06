@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Star, Heart, Clock, Phone, AtSign as InstagramIcon,
   Wifi, Plug, Volume2, Car, PawPrint, Moon, Camera, Share2, Navigation, Flag,
@@ -35,13 +35,16 @@ const TABS = ["Overview", "Menu", "Reviews", "Info"];
 export default function CafeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, role } = useAuth();
   const { getById } = usePlaces();
   const [cafe, setCafe] = useState(() => getById(id));
   const [loadingCafe, setLoadingCafe] = useState(!getById(id));
   const [saved, setSaved] = useState(false);
   const [showReport, setShowReport] = useState(false);
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [activeTab, setActiveTab] = useState(
+    location.hash === "#reviews" ? "Reviews" : "Overview"
+  );
   const [imgError, setImgError] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
   const [claimPhone, setClaimPhone] = useState("");
@@ -51,6 +54,10 @@ export default function CafeDetailPage() {
   const [confirmMsg, setConfirmMsg] = useState("");
   const [spots, setSpots] = useState([]);
   const [saveSheetOpen, setSaveSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.hash === "#reviews") setActiveTab("Reviews");
+  }, [location.hash]);
 
   useEffect(() => {
     let cancelled = false;
@@ -490,14 +497,14 @@ export default function CafeDetailPage() {
         )}
 
         {activeTab === "Reviews" && (
-          <>
+          <div id="reviews">
             <div className="mb-4 flex items-center gap-2 text-sm">
               <Star size={16} className="fill-gold-400 text-gold-400" />
               <span className="font-bold text-warm-700">{cafe.rating}</span>
               <span className="text-warm-400">· {cafe.reviewCount} reviews</span>
             </div>
             <ReviewSection cafeId={String(cafe.id)} canWrite={!isOwnListing} />
-          </>
+          </div>
         )}
 
         {activeTab === "Info" && (

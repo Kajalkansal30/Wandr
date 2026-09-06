@@ -33,6 +33,25 @@ delete from users where email like '%@wandr.test';
 ```
 
 Flyway `V1__security_accounts_reviews_notifications.sql` adds verification, refresh tokens, notifications, review uniqueness.
+Flyway `V2__notifications_metadata_account.sql` adds notification deep-link fields, idempotency, and nullable review authors for account deletion.
+
+### Promote a production admin
+Signup never creates admins. In Supabase SQL:
+
+```sql
+UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
+```
+
+Then sign in and open `/admin` or Profile → **Command Center**.
+
+Local `dev` profile seeds `admin@wandr.test` / `wandr123`.
+
+### Notifications retention
+In-app notifications can accumulate. Periodically prune old rows (e.g. older than 180 days) when volume grows:
+
+```sql
+DELETE FROM notifications WHERE created_at < NOW() - INTERVAL '180 days';
+```
 
 ## Troubleshooting
 

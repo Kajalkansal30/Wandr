@@ -44,6 +44,14 @@ API: http://localhost:8080
 | OWNER | owner@wandr.test  | wandr123  |
 | ADMIN | admin@wandr.test  | wandr123  |
 
+Demo accounts only load with the `dev` profile. In production, promote an admin with:
+
+```sql
+UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
+```
+
+Then open `/admin` (or Profile → Command Center).
+
 ## Useful endpoints
 ```
 GET  /api/health

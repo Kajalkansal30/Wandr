@@ -2,9 +2,28 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
-import { Heart, MapPin, Star, Award, Compass, ArrowRight, ArrowLeft, Store, Shield, Sparkles, Gem, TrendingUp, Binoculars } from "lucide-react";
+import {
+  Heart,
+  MapPin,
+  Star,
+  Award,
+  Compass,
+  ArrowRight,
+  ArrowLeft,
+  Store,
+  Shield,
+  Sparkles,
+  Gem,
+  TrendingUp,
+  Binoculars,
+  Bell,
+  KeyRound,
+  Trash2,
+} from "lucide-react";
 import { loadSavedIds } from "../utils/favorites";
 import { computeBadges } from "../utils/badges";
+import { changePasswordRequest, deleteAccountRequest } from "../api/auth";
+import { setToken } from "../api/client";
 
 const BADGE_ICONS = {
   early: Sparkles,
@@ -13,11 +32,21 @@ const BADGE_ICONS = {
   trend: TrendingUp,
 };
 
+const SESSION_KEY = "wandr_session";
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, role, signOut } = useAuth();
   const { places } = usePlaces();
   const [savedIds, setSavedIds] = useState([]);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordMsg, setPasswordMsg] = useState("");
+  const [passwordErr, setPasswordErr] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteErr, setDeleteErr] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -56,6 +85,37 @@ export default function ProfilePage() {
     { label: "Saved", value: savedIds.length, icon: Heart },
     { label: "Badges", value: badges.length, icon: Award },
   ];
+
+  async function onChangePassword(e) {
+    e.preventDefault();
+    setPasswordMsg("");
+    setPasswordErr("");
+    try {
+      await changePasswordRequest(oldPassword, newPassword);
+      setOldPassword("");
+      setNewPassword("");
+      setPasswordMsg("Password updated. Sign in again on other devices.");
+    } catch (err) {
+      setPasswordErr(err.message || "Could not change password");
+    }
+  }
+
+  async function onDeleteAccount(e) {
+    e.preventDefault();
+    setDeleteErr("");
+    setDeleting(true);
+    try {
+      await deleteAccountRequest(deletePassword);
+      const uid = user.uid;
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(`wandr_saved_cafes:${uid}`);
+      setToken(null);
+      window.location.href = "/";
+    } catch (err) {
+      setDeleteErr(err.message || "Could not delete account");
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="page-shell page-with-nav pt-6 md:pt-8">
@@ -125,6 +185,16 @@ export default function ProfilePage() {
       </section>
 
       <section className="mb-8 space-y-2">
+        <button
+          type="button"
+          onClick={() => navigate("/notifications")}
+          className="flex w-full items-center justify-between rounded-xl border border-warm-100 bg-white p-4 transition hover:bg-warm-50"
+        >
+          <span className="flex items-center gap-3 text-sm font-semibold text-warm-700">
+            <Bell size={16} className="text-warm-600" /> Notifications
+          </span>
+          <ArrowRight size={16} className="text-warm-300" />
+        </button>
         {(role === "owner" || role === "admin") && (
           <button
             type="button"
@@ -164,6 +234,91 @@ export default function ProfilePage() {
           </span>
           <ArrowRight size={16} className="text-warm-300" />
         </button>
+      </section>
+
+      <section className="mb-8 rounded-xl border border-warm-100 bg-white p-4">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-warm-700">
+          <KeyRound size={16} /> Change password
+        </h2>
+        <form onSubmit={onChangePassword} className="space-y-3">
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+            placeholder="Current password"
+            className="w-full rounded-lg border border-warm-200 px-3 py-2 text-sm"
+          />
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="New password"
+            className="w-full rounded-lg border border-warm-200 px-3 py-2 text-sm"
+          />
+          {passwordMsg && <p className="text-xs text-sage-600">{passwordMsg}</p>}
+          {passwordErr && <p className="text-xs text-terracotta-500">{passwordErr}</p>}
+          <button
+            type="submit"
+            className="rounded-lg bg-warm-600 px-4 py-2 text-sm font-semibold text-white hover:bg-warm-700"
+          >
+            Update password
+          </button>
+        </form>
+      </section>
+
+      <section className="mb-8 rounded-xl border border-terracotta-200 bg-terracotta-50/40 p-4">
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-bold text-terracotta-700">
+          <Trash2 size={16} /> Delete my account
+        </h2>
+        <p className="mb-3 text-xs text-warm-500">
+          Permanently removes your profile, saves, and claims. Owned listings are closed and hidden.
+          Reviews stay anonymized as “Deleted user.”
+        </p>
+        {!deleteOpen ? (
+          <button
+            type="button"
+            onClick={() => setDeleteOpen(true)}
+            className="text-sm font-semibold text-terracotta-600 hover:underline"
+          >
+            Delete my account…
+          </button>
+        ) : (
+          <form onSubmit={onDeleteAccount} className="space-y-3">
+            <input
+              type="password"
+              required
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Confirm with your password"
+              className="w-full rounded-lg border border-terracotta-200 px-3 py-2 text-sm"
+            />
+            {deleteErr && <p className="text-xs text-terracotta-600">{deleteErr}</p>}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={deleting}
+                className="rounded-lg bg-terracotta-600 px-4 py-2 text-sm font-semibold text-white hover:bg-terracotta-700 disabled:opacity-60"
+              >
+                {deleting ? "Deleting…" : "Permanently delete"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setDeletePassword("");
+                  setDeleteErr("");
+                }}
+                className="rounded-lg px-4 py-2 text-sm text-warm-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </section>
 
       <button

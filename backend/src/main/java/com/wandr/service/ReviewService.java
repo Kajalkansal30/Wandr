@@ -10,9 +10,9 @@ import com.wandr.security.VerifiedEmailGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,6 +21,7 @@ public class ReviewService {
 
   private final ReviewRepository reviewRepository;
   private final PlaceService placeService;
+  private final NotificationService notificationService;
 
   public List<ReviewDtos.ReviewResponse> list(Long placeId) {
     return reviewRepository.findByPlaceIdAndStatusOrderByCreatedAtDesc(placeId, ReviewStatus.APPROVED).stream()
@@ -37,6 +38,7 @@ public class ReviewService {
         .map(String::trim)
         .collect(Collectors.joining(","));
 
+    AtomicBoolean created = new AtomicBoolean(false);
     Review review = reviewRepository.findByUserIdAndPlaceId(user.getId(), placeId)
         .map(existing -> {
           existing.setRating(req.rating());
@@ -46,18 +48,37 @@ public class ReviewService {
           existing.setStatus(ReviewStatus.APPROVED);
           return existing;
         })
-        .orElseGet(() -> Review.builder()
-            .placeId(placeId)
-            .userId(user.getId())
-            .userDisplayName(user.getDisplayName())
-            .rating(req.rating())
-            .text(req.text())
-            .experienceTags(tags)
-            .status(ReviewStatus.APPROVED)
-            .build());
+        .orElseGet(() -> {
+          created.set(true);
+          return Review.builder()
+              .placeId(placeId)
+              .userId(user.getId())
+              .userDisplayName(user.getDisplayName())
+              .rating(req.rating())
+              .text(req.text())
+              .experienceTags(tags)
+              .status(ReviewStatus.APPROVED)
+              .build();
+        });
 
     review = reviewRepository.save(review);
     recalculatePlaceRatings(place);
+
+    if (created.get()
+        && place.getOwner() != null
+        && !place.getOwner().getId().equals(user.getId())) {
+      int stars = review.getRating() == null ? 0 : review.getRating();
+      notificationService.create(
+          place.getOwner().getId(),
+          "NEW_REVIEW",
+          "New review",
+          "Someone just reviewed " + place.getName() + ". ★ " + stars + "/5",
+          "PLACE",
+          place.getId(),
+          "{\"reviewId\":" + review.getId() + ",\"rating\":" + stars + "}",
+          "review:" + review.getId()
+      );
+    }
 
     return ReviewDtos.ReviewResponse.from(review);
   }

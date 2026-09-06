@@ -101,7 +101,7 @@ public class PlaceService {
   }
 
   public Place requirePlace(Long id) {
-    return placeRepository.findById(id)
+    return placeRepository.findByIdWithOwner(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
   }
 

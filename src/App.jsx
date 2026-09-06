@@ -13,6 +13,7 @@ import VerifyEmailPage from "./pages/VerifyEmailPage";
 import CafeDetailPage from "./pages/CafeDetailPage";
 import SavedPage from "./pages/SavedPage";
 import ProfilePage from "./pages/ProfilePage";
+import NotificationsPage from "./pages/NotificationsPage";
 import SubmitPlacePage from "./pages/SubmitPlacePage";
 import MapExplorePage from "./pages/MapExplorePage";
 import { CuratedListsIndex, CuratedListPage } from "./pages/CuratedListsPage";
@@ -57,6 +58,14 @@ export default function App() {
                 }
               />
               <Route path="profile" element={<ProfilePage />} />
+              <Route
+                path="notifications"
+                element={
+                  <ProtectedRoute allowedRoles={["user", "owner", "admin"]}>
+                    <NotificationsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="submit" element={<SubmitPlacePage />} />
 
               <Route

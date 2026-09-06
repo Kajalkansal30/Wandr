@@ -37,4 +37,8 @@ public interface BoostCampaignRepository extends JpaRepository<BoostCampaign, Lo
   List<BoostCampaign> findByStatus(BoostStatus status);
 
   Optional<BoostCampaign> findByIdAndOwnerId(Long id, Long ownerId);
+
+  @org.springframework.data.jpa.repository.Modifying
+  @org.springframework.data.jpa.repository.Query("DELETE FROM BoostCampaign b WHERE b.ownerId = :ownerId")
+  int deleteByOwnerId(@org.springframework.data.repository.query.Param("ownerId") Long ownerId);
 }
