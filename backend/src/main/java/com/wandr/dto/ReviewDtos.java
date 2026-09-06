@@ -1,6 +1,7 @@
 package com.wandr.dto;
 
 import com.wandr.domain.Review;
+import jakarta.validation.constraints.*;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -8,7 +9,11 @@ import java.util.List;
 
 public class ReviewDtos {
 
-  public record CreateRequest(Integer rating, String text, List<String> experienceTags) {}
+  public record CreateRequest(
+      @NotNull @Min(1) @Max(5) Integer rating,
+      @Size(max = 2000) String text,
+      List<@Size(max = 50) String> experienceTags
+  ) {}
 
   public record ReviewResponse(
       Long id,

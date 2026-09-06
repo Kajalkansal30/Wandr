@@ -123,7 +123,7 @@ export default function LoginPage() {
             {user && role === "user" && businessIntent && (
               <p className="mt-3 rounded-xl border border-warm-200 bg-warm-50 px-3 py-2 text-xs text-warm-600">
                 You&apos;re signed in as an explorer. Sign in with an{" "}
-                <strong>owner</strong> account (e.g. owner@wandr.test) to open the business dashboard.
+                <strong>owner</strong> account to open the business dashboard.
               </p>
             )}
           </div>
@@ -146,7 +146,7 @@ export default function LoginPage() {
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-warm-400">Demo accounts · password wandr123</p>
+              <p className="mt-2 text-[11px] text-warm-400">Local API seed · password wandr123</p>
             </div>
           )}
 
@@ -192,6 +192,11 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
+              <p className="mt-2 text-right text-sm">
+                <Link to="/forgot-password" className="font-medium text-warm-600 hover:underline">
+                  Forgot password?
+                </Link>
+              </p>
             </div>
 
             <button

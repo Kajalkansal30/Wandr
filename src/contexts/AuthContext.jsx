@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { loginRequest, signupRequest } from "../api/auth";
+import { loginRequest, signupRequest, logoutRequest } from "../api/auth";
 import { getToken, setToken } from "../api/client";
 
 const AuthContext = createContext(null);
@@ -37,15 +37,15 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const session = loadSession();
-    if (session?.user) {
+    if (session?.user && getToken()) {
       setUser(session.user);
       setRole(session.role || "user");
     }
     setLoading(false);
   }, []);
 
-  async function signup(email, password, displayName, selectedRole = "user") {
-    const result = await signupRequest(email, password, displayName, selectedRole);
+  async function signup(email, password, displayName) {
+    const result = await signupRequest(email, password, displayName);
     setUser(result.user);
     setRole(result.role);
     saveSession(result.user, result.role);
@@ -61,6 +61,7 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    await logoutRequest();
     clearSession();
     setUser(null);
     setRole(null);
@@ -74,8 +75,8 @@ export function AuthProvider({ children }) {
     signup,
     login,
     signOut,
-    /** Test accounts still shown on login; backed by Spring Boot seed */
-    isDemoMode: true,
+    isDemoMode: import.meta.env.DEV,
+    emailVerified: Boolean(user?.emailVerified),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

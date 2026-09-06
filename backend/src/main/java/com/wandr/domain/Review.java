@@ -8,6 +8,8 @@ import java.time.Instant;
 @Entity
 @Table(name = "reviews", indexes = {
     @Index(name = "idx_review_place", columnList = "placeId,createdAt")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uk_reviews_user_place", columnNames = {"user_id", "place_id"})
 })
 @Getter
 @Setter
@@ -37,11 +39,26 @@ public class Review {
   /** Comma-separated experience tags */
   private String experienceTags;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  @Builder.Default
+  private ReviewStatus status = ReviewStatus.APPROVED;
+
+  @Column(nullable = false)
+  @Builder.Default
+  private Integer reportCount = 0;
+
+  private Instant moderatedAt;
+
+  private Long moderatedBy;
+
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
 
   @PrePersist
   void onCreate() {
     if (createdAt == null) createdAt = Instant.now();
+    if (status == null) status = ReviewStatus.APPROVED;
+    if (reportCount == null) reportCount = 0;
   }
 }

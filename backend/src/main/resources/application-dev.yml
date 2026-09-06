@@ -1,4 +1,5 @@
-# Run without Docker: ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# Local / Docker-free: ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# Enables H2 + DataSeeder demo accounts
 spring:
   datasource:
     url: jdbc:h2:mem:wandr;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
@@ -11,6 +12,16 @@ spring:
   h2:
     console:
       enabled: true
+  flyway:
+    enabled: false
+
+wandr:
+  jwt:
+    secret: ${WANDR_JWT_SECRET:wandr-dev-secret-change-me-in-production-32chars-min}
+  cors:
+    allowed-origin-patterns: http://localhost:*,http://127.0.0.1:*
+  app:
+    web-base-url: http://localhost:5173
 
 logging:
   level:

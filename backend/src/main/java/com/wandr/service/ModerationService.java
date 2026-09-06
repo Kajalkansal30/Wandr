@@ -28,6 +28,7 @@ public class ModerationService {
   private final PlaceClaimRepository placeClaimRepository;
   private final PlaceReportRepository placeReportRepository;
   private final PlaceMediaRepository placeMediaRepository;
+  private final NotificationService notificationService;
 
   public List<ModerationDtos.ActionResponse> auditLog() {
     return moderationActionRepository.findTop50ByOrderByCreatedAtDesc().stream()
@@ -70,6 +71,15 @@ public class ModerationService {
     }
     placeService.save(place);
     log(admin, placeId, null, null, ModerationActionType.APPROVE, req);
+    if (place.getOwner() != null) {
+      notificationService.create(
+          place.getOwner().getId(),
+          "CAFE_APPROVED",
+          "Your café was approved",
+          place.getName() + " is now live on Wandr.",
+          String.valueOf(placeId)
+      );
+    }
     return PlaceDtos.PlaceResponse.from(place, null);
   }
 
@@ -80,6 +90,15 @@ public class ModerationService {
     if (req != null && req.note() != null) place.setAdminNote(req.note());
     placeService.save(place);
     log(admin, placeId, null, null, ModerationActionType.REJECT, req);
+    if (place.getOwner() != null) {
+      notificationService.create(
+          place.getOwner().getId(),
+          "CAFE_REJECTED",
+          "Listing needs changes",
+          place.getName() + " was not approved." + (req != null && req.note() != null ? " " + req.note() : ""),
+          String.valueOf(placeId)
+      );
+    }
     return PlaceDtos.PlaceResponse.from(place, null);
   }
 

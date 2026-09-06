@@ -6,6 +6,7 @@ import com.wandr.repo.PlaceMediaRepository;
 import com.wandr.repo.PlaceRepository;
 import com.wandr.repo.SpotLikeRepository;
 import com.wandr.repo.SpotReportRepository;
+import com.wandr.security.VerifiedEmailGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -89,6 +90,7 @@ public class SpottedService {
   @Transactional
   public SpottedDtos.SpotResponse create(User user, SpottedDtos.CreateRequest req) {
     if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Login required");
+    VerifiedEmailGuard.requireVerified(user);
     if (req == null || req.placeId() == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "placeId is required");
     }

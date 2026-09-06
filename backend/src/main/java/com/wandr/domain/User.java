@@ -31,11 +31,24 @@ public class User {
   @Column(nullable = false)
   private Role role;
 
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean emailVerified = false;
+
+  private String emailVerificationToken;
+
+  private Instant emailVerificationExpiresAt;
+
+  private String passwordResetTokenHash;
+
+  private Instant passwordResetExpiresAt;
+
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
 
   @PrePersist
   void onCreate() {
     if (createdAt == null) createdAt = Instant.now();
+    if (!emailVerified) emailVerified = false;
   }
 }

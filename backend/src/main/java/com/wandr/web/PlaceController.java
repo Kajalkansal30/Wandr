@@ -3,6 +3,7 @@ package com.wandr.web;
 import com.wandr.domain.User;
 import com.wandr.dto.*;
 import com.wandr.service.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -89,7 +90,7 @@ public class PlaceController {
   public ReviewDtos.ReviewResponse addReview(
       @AuthenticationPrincipal User user,
       @PathVariable Long id,
-      @RequestBody ReviewDtos.CreateRequest body
+      @Valid @RequestBody ReviewDtos.CreateRequest body
   ) {
     return reviewService.create(user, id, body);
   }

@@ -24,6 +24,25 @@ public class AuthDtos {
       Long userId,
       String email,
       String displayName,
-      String role
+      String role,
+      boolean emailVerified
   ) {}
+
+  public record MessageResponse(String message) {}
+
+  public record VerifyEmailRequest(@NotBlank String token) {}
+
+  public record ForgotPasswordRequest(@Email @NotBlank String email) {}
+
+  public record ResetPasswordRequest(
+      @NotBlank String token,
+      @NotBlank @Size(min = 6) String newPassword
+  ) {}
+
+  public record ChangePasswordRequest(
+      @NotBlank String oldPassword,
+      @NotBlank @Size(min = 6) String newPassword
+  ) {}
+
+  public record RefreshResponse(String token, boolean emailVerified) {}
 }

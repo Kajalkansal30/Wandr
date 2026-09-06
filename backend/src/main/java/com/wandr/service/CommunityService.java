@@ -6,6 +6,7 @@ import com.wandr.dto.CommunityDtos;
 import com.wandr.dto.PlaceDtos;
 import com.wandr.repo.ContributionRepository;
 import com.wandr.repo.PlaceReportRepository;
+import com.wandr.security.VerifiedEmailGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class CommunityService {
 
   @Transactional
   public PlaceDtos.PlaceResponse confirmInfo(User user, Long placeId, CommunityDtos.ConfirmRequest req) {
+    VerifiedEmailGuard.requireVerified(user);
     Place place = placeService.requirePlace(placeId);
     if (place.getStatus() != PlaceStatus.APPROVED) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can only confirm live places");

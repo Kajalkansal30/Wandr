@@ -20,6 +20,12 @@ public class JwtService {
       @Value("${wandr.jwt.secret}") String secret,
       @Value("${wandr.jwt.expiration-ms}") long expirationMs
   ) {
+    if (secret == null || secret.isBlank()) {
+      throw new IllegalStateException("wandr.jwt.secret must be set and non-blank");
+    }
+    if (secret.length() < 32) {
+      throw new IllegalStateException("wandr.jwt.secret must be at least 32 characters");
+    }
     this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     this.expirationMs = expirationMs;
   }

@@ -14,22 +14,36 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
 
 server:
   port: ${PORT:8080}
 
 wandr:
   jwt:
-    secret: ${WANDR_JWT_SECRET:wandr-dev-secret-change-me-in-production-32chars-min}
-    expiration-ms: ${WANDR_JWT_EXPIRATION_MS:86400000}
+    # No committed production secret — set WANDR_JWT_SECRET (min 32 chars)
+    secret: ${WANDR_JWT_SECRET:}
+    expiration-ms: ${WANDR_JWT_EXPIRATION_MS:900000}
+    refresh-expiration-ms: ${WANDR_JWT_REFRESH_EXPIRATION_MS:604800000}
   cors:
-    # Comma-separated origins/patterns. Exact Render web + local Vite.
-    allowed-origin-patterns: ${WANDR_CORS_ORIGINS:https://wandr-web.onrender.com,http://localhost:*,http://127.0.0.1:*,https://*.onrender.com}
+    allowed-origin-patterns: ${WANDR_CORS_ORIGINS:http://localhost:*,http://127.0.0.1:*}
   cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME:}
     api-key: ${CLOUDINARY_API_KEY:}
     api-secret: ${CLOUDINARY_API_SECRET:}
+  app:
+    web-base-url: ${WANDR_WEB_BASE_URL:http://localhost:5173}
+  email:
+    from: ${WANDR_EMAIL_FROM:Wandr <onboarding@resend.dev>}
+    resend-api-key: ${RESEND_API_KEY:}
 
 logging:
   level:
     org.springframework.security: INFO
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:${SPRING_PROFILES_ACTIVE:local}}

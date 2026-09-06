@@ -2,11 +2,9 @@ function resolveApiBase(raw) {
   let value = (raw || "http://localhost:8080").trim().replace(/\/$/, "");
   if (!value) return "http://localhost:8080";
 
-  // Strip scheme for host normalization, then re-apply https (except localhost)
   const hadScheme = /^https?:\/\//i.test(value);
   let host = value.replace(/^https?:\/\//i, "");
 
-  // Render Blueprint "host" sometimes returns "wandr-api-xxxx" without .onrender.com
   if (host && !host.includes(".") && !/^localhost(:\d+)?$/i.test(host) && !/^127\.0\.0\.1(:\d+)?$/.test(host)) {
     host = `${host}.onrender.com`;
   }
@@ -21,6 +19,7 @@ function resolveApiBase(raw) {
 }
 
 const API_BASE = resolveApiBase(import.meta.env.VITE_API_URL);
+const ACCESS_KEY = "wandr_access";
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -30,15 +29,44 @@ export class ApiError extends Error {
 }
 
 export function getToken() {
-  return localStorage.getItem("wandr_token");
+  return sessionStorage.getItem(ACCESS_KEY) || localStorage.getItem("wandr_token");
 }
 
 export function setToken(token) {
-  if (token) localStorage.setItem("wandr_token", token);
-  else localStorage.removeItem("wandr_token");
+  if (token) {
+    sessionStorage.setItem(ACCESS_KEY, token);
+    localStorage.removeItem("wandr_token");
+  } else {
+    sessionStorage.removeItem(ACCESS_KEY);
+    localStorage.removeItem("wandr_token");
+  }
 }
 
-export async function api(path, { method = "GET", body, auth = false, timeoutMs = 15000 } = {}) {
+let refreshPromise = null;
+
+async function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        setToken(null);
+        throw new ApiError("Session expired", 401);
+      }
+      const data = await res.json();
+      setToken(data.token);
+      return data;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+export async function api(path, { method = "GET", body, auth = false, timeoutMs = 15000, retry = true } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const token = getToken();
@@ -55,6 +83,7 @@ export async function api(path, { method = "GET", body, auth = false, timeoutMs 
       headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
+      credentials: "include",
     });
   } catch (err) {
     if (err?.name === "AbortError") {
@@ -63,6 +92,15 @@ export async function api(path, { method = "GET", body, auth = false, timeoutMs 
     throw err;
   } finally {
     clearTimeout(timer);
+  }
+
+  if (res.status === 401 && auth && retry && !path.startsWith("/api/auth/")) {
+    try {
+      await refreshAccessToken();
+      return api(path, { method, body, auth, timeoutMs, retry: false });
+    } catch {
+      /* fall through */
+    }
   }
 
   if (!res.ok) {
@@ -80,4 +118,4 @@ export async function api(path, { method = "GET", body, auth = false, timeoutMs 
   return res.json();
 }
 
-export { API_BASE };
+export { API_BASE, refreshAccessToken };

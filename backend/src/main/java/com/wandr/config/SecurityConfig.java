@@ -1,6 +1,7 @@
 package com.wandr.config;
 
 import com.wandr.security.JwtAuthFilter;
+import com.wandr.security.RateLimitFilter;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,6 +32,7 @@ import java.util.List;
 public class SecurityConfig {
 
   private final JwtAuthFilter jwtAuthFilter;
+  private final RateLimitFilter rateLimitFilter;
 
   @Value("${wandr.cors.allowed-origin-patterns}")
   private String allowedOriginPatterns;
@@ -40,8 +43,20 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable())
         .cors(Customizer.withDefaults())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .headers(headers -> {
+          headers.frameOptions(frame -> frame.deny());
+          headers.contentTypeOptions(Customizer.withDefaults());
+          headers.referrerPolicy(referrer -> referrer
+              .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
+          headers.httpStrictTransportSecurity(hsts -> hsts
+              .includeSubDomains(true)
+              .maxAgeInSeconds(31536000));
+          headers.contentSecurityPolicy(csp -> csp
+              .policyDirectives("default-src 'none'; frame-ancestors 'none'"));
+          headers.permissionsPolicy(permissions -> permissions
+              .policy("geolocation=(), microphone=(), camera=()"));
+        })
         .authorizeHttpRequests(auth -> auth
-            // Spring Security 6: ERROR/FORWARD dispatches must be permitted or real exceptions become opaque 403s
             .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
             .requestMatchers("/error").permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -63,6 +78,7 @@ public class SecurityConfig {
             .requestMatchers("/api/owner/**").hasAnyRole("OWNER", "ADMIN")
             .anyRequest().authenticated()
         )
+        .addFilterBefore(rateLimitFilter, JwtAuthFilter.class)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
@@ -88,9 +104,7 @@ public class SecurityConfig {
     if (patterns.isEmpty()) {
       config.setAllowedOriginPatterns(List.of(
           "http://localhost:*",
-          "http://127.0.0.1:*",
-          "https://wandr-web.onrender.com",
-          "https://*.onrender.com"
+          "http://127.0.0.1:*"
       ));
     } else {
       config.setAllowedOriginPatterns(patterns);

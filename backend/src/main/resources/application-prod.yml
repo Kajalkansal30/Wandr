@@ -1,0 +1,25 @@
+# Production profile — set SPRING_PROFILES_ACTIVE=prod on Render
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+
+wandr:
+  jwt:
+    # Required — no fallback. Render must set WANDR_JWT_SECRET (32+ chars).
+    secret: ${WANDR_JWT_SECRET}
+    expiration-ms: ${WANDR_JWT_EXPIRATION_MS:900000}
+    refresh-expiration-ms: ${WANDR_JWT_REFRESH_EXPIRATION_MS:604800000}
+  cors:
+    allowed-origin-patterns: ${WANDR_CORS_ORIGINS:https://www.wandrhere.com,https://wandrhere.com}
+  app:
+    web-base-url: ${WANDR_WEB_BASE_URL:https://www.wandrhere.com}
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never

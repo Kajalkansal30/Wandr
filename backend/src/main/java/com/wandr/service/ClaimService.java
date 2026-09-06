@@ -5,6 +5,7 @@ import com.wandr.dto.ClaimDtos;
 import com.wandr.dto.ModerationDtos;
 import com.wandr.repo.PlaceClaimRepository;
 import com.wandr.repo.UserRepository;
+import com.wandr.security.VerifiedEmailGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class ClaimService {
   private final PlaceService placeService;
   private final ModerationService moderationService;
   private final UserRepository userRepository;
+  private final NotificationService notificationService;
 
   public List<ClaimDtos.ClaimResponse> listPending() {
     return placeClaimRepository.findByStatusOrderByCreatedAtDesc(ClaimStatus.PENDING).stream()
@@ -37,6 +39,7 @@ public class ClaimService {
 
   @Transactional
   public ClaimDtos.ClaimResponse create(User user, Long placeId, ClaimDtos.CreateClaimRequest req) {
+    VerifiedEmailGuard.requireVerified(user);
     Place place = placeService.requirePlace(placeId);
     if (place.getOwnershipStatus() == OwnershipStatus.OWNER_VERIFIED
         || place.getOwnershipStatus() == OwnershipStatus.OWNER_CLAIMED) {
@@ -85,6 +88,10 @@ public class ClaimService {
 
     place.setOwner(claimant);
     place.setClaimedAt(Instant.now());
+    if (claimant.getRole() == Role.USER) {
+      claimant.setRole(Role.OWNER);
+      userRepository.save(claimant);
+    }
 
     if (Boolean.TRUE.equals(claim.getVerificationRequest())) {
       place.setOwnershipStatus(OwnershipStatus.OWNER_VERIFIED);
@@ -98,6 +105,13 @@ public class ClaimService {
       moderationService.log(admin, place.getId(), claimId, null, ModerationActionType.APPROVE_CLAIM, req);
     }
     placeService.save(place);
+    notificationService.create(
+        claimant.getId(),
+        "CLAIM_APPROVED",
+        "Claim approved",
+        "You now manage " + place.getName() + " on Wandr.",
+        String.valueOf(place.getId())
+    );
     return ClaimDtos.ClaimResponse.from(claim, place.getName());
   }
 
@@ -121,6 +135,13 @@ public class ClaimService {
             ? ModerationActionType.REJECT_VERIFICATION
             : ModerationActionType.REJECT_CLAIM,
         req);
+    notificationService.create(
+        claim.getUserId(),
+        "CLAIM_REJECTED",
+        "Claim not approved",
+        "Your claim for " + place.getName() + " was rejected.",
+        String.valueOf(place.getId())
+    );
     return ClaimDtos.ClaimResponse.from(claim, place.getName());
   }
 

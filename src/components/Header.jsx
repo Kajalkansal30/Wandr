@@ -3,6 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { User, Plus } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import AddChooser from "./AddChooser";
+import NotificationBell from "./NotificationBell";
 
 export default function Header() {
   const { user, role } = useAuth();
@@ -44,6 +45,7 @@ export default function Header() {
               <Plus size={16} />
               Add
             </button>
+            <NotificationBell />
             {user ? (
               <Link
                 to="/profile"

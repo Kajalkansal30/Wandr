@@ -8,6 +8,7 @@ import com.wandr.repo.PlaceRepository;
 import com.wandr.repo.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +17,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+/** Demo data — local/dev profile only. Never runs in production. */
 @Component
+@Profile("dev")
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 
@@ -76,6 +79,7 @@ public class DataSeeder implements CommandLineRunner {
         .passwordHash(passwordEncoder.encode(password))
         .displayName(name)
         .role(role)
+        .emailVerified(true)
         .build());
   }
 

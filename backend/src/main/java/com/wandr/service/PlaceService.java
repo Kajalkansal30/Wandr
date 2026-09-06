@@ -3,6 +3,7 @@ package com.wandr.service;
 import com.wandr.domain.*;
 import com.wandr.dto.PlaceDtos;
 import com.wandr.repo.PlaceRepository;
+import com.wandr.security.VerifiedEmailGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -147,6 +148,7 @@ public class PlaceService {
 
   @Transactional
   public PlaceDtos.PlaceResponse createCommunity(User user, PlaceDtos.CommunitySubmitRequest req) {
+    VerifiedEmailGuard.requireVerified(user);
     if (req == null || req.name() == null || req.name().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
     }
