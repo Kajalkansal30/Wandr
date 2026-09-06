@@ -4,7 +4,7 @@ import { Heart, Plus, MapPin, Check, BookOpen, X, ArrowLeft, Folder } from "luci
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
 import CafeCard from "../components/CafeCard";
-import { loadSavedIds } from "../utils/favorites";
+import { loadSavedPlaces } from "../utils/favorites";
 import {
   loadCollections,
   createCollection,
@@ -23,6 +23,7 @@ export default function SavedPage() {
   const { user } = useAuth();
   const { places } = usePlaces();
   const [savedIds, setSavedIds] = useState([]);
+  const [savedPlaces, setSavedPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCollection, setActiveCollection] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -32,18 +33,44 @@ export default function SavedPage() {
   useEffect(() => {
     if (!user) {
       setSavedIds([]);
+      setSavedPlaces([]);
       setCollections([]);
       setLoading(false);
       return;
     }
+    let cancelled = false;
     setCollections(loadCollections(user.uid));
-    loadSavedIds(user)
-      .then(setSavedIds)
-      .catch(() => setSavedIds([]))
-      .finally(() => setLoading(false));
+    setLoading(true);
+    loadSavedPlaces(user, places)
+      .then(({ places: favPlaces, ids }) => {
+        if (cancelled) return;
+        setSavedPlaces(favPlaces);
+        setSavedIds(ids);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSavedIds([]);
+        setSavedPlaces([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+    // Intentionally only on user — places join is handled below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const savedCafes = places.filter((c) => savedIds.includes(String(c.id)));
+  // If API returned ids only / failed and discover list loads later, fill cards
+  useEffect(() => {
+    if (!user || savedPlaces.length > 0 || savedIds.length === 0) return;
+    const joined = places.filter((c) => savedIds.includes(String(c.id)));
+    if (joined.length > 0) setSavedPlaces(joined);
+  }, [user, places, savedIds, savedPlaces.length]);
+
+  const savedCafes = (() => {
+    if (savedPlaces.length > 0) return savedPlaces;
+    return places.filter((c) => savedIds.includes(String(c.id)));
+  })();
   const visibleCafes = (() => {
     if (!activeCollection) return savedCafes;
     const col = collections.find((c) => c.id === activeCollection);
@@ -61,7 +88,7 @@ export default function SavedPage() {
   if (loading) {
     return (
       <div className="page-shell page-with-nav flex justify-center pt-14">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-warm-200 border-t-warm-600" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-warm-200 border-t-warm-600" />
       </div>
     );
   }

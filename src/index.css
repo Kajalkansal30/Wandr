@@ -55,6 +55,12 @@
   --wandr-gradient: linear-gradient(135deg, #F3B5B9 0%, #EF6F61 45%, #F4C95D 100%);
   --color-error: #C84C4C;
   --color-success: #5D8A68;
+  /* Matches sticky site Header (logo h-10/h-11 + py-2.5/py-3) */
+  --header-height: 3.75rem;
+}
+
+html {
+  scroll-padding-top: var(--header-height);
 }
 
 /*

@@ -96,12 +96,13 @@ export default function CafeDetailPage() {
 
   useEffect(() => {
     setImgError(false);
+    window.scrollTo(0, 0);
   }, [id]);
 
   if (loadingCafe) {
     return (
       <div className="page-shell page-with-nav flex justify-center pt-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-warm-200 border-t-warm-500" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-warm-200 border-t-warm-500" />
       </div>
     );
   }
@@ -234,12 +235,13 @@ export default function CafeDetailPage() {
 
       {/* Owner manage bar — always for own listing */}
       {isOwnListing && (
-        <div className="sticky top-0 z-30 mt-3 flex items-center justify-between rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 shadow-sm">
+        <div className="sticky top-[var(--header-height)] z-30 mt-3 flex items-center justify-between rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 shadow-sm">
           <div>
             <p className="text-sm font-semibold text-warm-700">Your listing</p>
             <p className="text-xs text-warm-400">
               {(cafe.status === "approved" || cafe.status === "APPROVED") ? "Live on Discover" : `Status: ${cafe.status}`}
               {cafe.ownershipStatus === "OWNER_VERIFIED" && " · Verified"}
+              {" · Save is for explorers on Discover"}
             </p>
           </div>
           <div className="flex gap-2">
@@ -384,7 +386,7 @@ export default function CafeDetailPage() {
       </div>
 
       {/* Tabs — spaced, scrollable on narrow screens */}
-      <div className="sticky top-0 z-20 mt-6 border-b border-warm-100 bg-cream">
+      <div className="sticky top-[var(--header-height)] z-20 mt-6 border-b border-warm-100 bg-cream">
         <div className="scrollbar-none flex gap-1 overflow-x-auto">
           {TABS.map((tab) => (
             <button

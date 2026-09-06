@@ -21,7 +21,7 @@ services:
       - key: JPA_DDL_AUTO
         value: update
       - key: WANDR_CORS_ORIGINS
-        value: https://wandr-web.onrender.com,http://localhost:*,http://127.0.0.1:*,https://*.onrender.com
+        value: https://www.wandrhere.com,https://wandrhere.com,https://wandr-web.onrender.com,http://localhost:*,http://127.0.0.1:*,https://*.onrender.com
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
@@ -39,7 +39,7 @@ services:
     envVars:
       # Full URL required — Render "host" alone can omit .onrender.com and break the build
       - key: VITE_API_URL
-        value: https://wandr-api-d59o.onrender.com
+        value: https://api.wandrhere.com
       - key: VITE_CLOUDINARY_CLOUD_NAME
         sync: false
       - key: VITE_CLOUDINARY_API_KEY

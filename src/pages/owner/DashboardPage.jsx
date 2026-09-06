@@ -124,7 +124,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="page-shell page-with-nav flex justify-center pt-14">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-warm-200 border-t-warm-500" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-warm-200 border-t-warm-500" />
       </div>
     );
   }
@@ -363,7 +363,7 @@ export default function DashboardPage() {
 
           {analyticsLoading && !analytics ? (
             <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-3 border-warm-200 border-t-warm-500" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-warm-200 border-t-warm-500" />
             </div>
           ) : approved.length === 0 ? (
             <p className="py-12 text-center text-sm text-warm-400">Get a cafe approved to see analytics.</p>

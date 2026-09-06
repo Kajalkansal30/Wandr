@@ -184,7 +184,7 @@ export default function HomePage() {
   if (placesLoading && allPlaces.length === 0) {
     return (
       <main className="page-shell page-with-nav flex justify-center pt-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-warm-200 border-t-warm-500" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-warm-200 border-t-warm-500" />
       </main>
     );
   }

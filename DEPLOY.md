@@ -28,8 +28,10 @@ Media binaries never go in Postgres — only `url` / `thumbnail_url` strings in 
 
 1. Supabase → **New project** (region close to Render, e.g. West US)  
 2. **Project Settings → Database → Connection string**  
-3. Prefer **direct** / **Session** mode URI for Hibernate/JPA (avoid Transaction pooler if connections fail)  
-4. Copy URI (`postgresql://…` or `postgres://…`)
+3. For **Render**, use **Session pooler** (IPv4). Direct `db.<ref>.supabase.co` often fails from Render with Hibernate “Unable to determine Dialect…”  
+4. Mode: **Session** · copy URI (`postgresql://postgres.<ref>:PASSWORD@aws-0-….pooler.supabase.com:5432/postgres`)  
+5. Paste that full URI into Render **wandr-api** → `DATABASE_URL` (no quotes)  
+6. After a successful API boot, Supabase **Table Editor** shows `users`, `places`, etc. (created by Hibernate `ddl-auto=update` + seeder)
 
 ## 2. Configure Cloudinary
 
@@ -60,16 +62,34 @@ git push -u origin main
 
 URLs (typical):
 
-- API: `https://wandr-api.onrender.com`  
-- Web: `https://wandr-web.onrender.com`
+- API: `https://api.wandrhere.com` (also `https://wandr-api-d59o.onrender.com`)  
+- Web: `https://www.wandrhere.com` (also `https://wandr-web.onrender.com`)
 
-## 5. Custom domain
+## 5. Custom domain (`wandrhere.com` on Namecheap)
 
-1. Render → **wandr-web** → Custom Domains → add `wandr.in` (or your domain)  
-2. Render → **wandr-api** → Custom Domains → add `api.wandr.in`  
-3. Point DNS as Render instructs (CNAME / A)  
-4. Set `WANDR_CORS_ORIGINS` on the API to include `https://wandr.in` (and `https://www.wandr.in` if used)  
-5. Set `VITE_API_URL=https://api.wandr.in` on the web service and **redeploy** so the build embeds the production API
+Keep **Namecheap BasicDNS** (do not switch to Custom DNS). Edit **Advanced DNS → HOST RECORDS**.
+
+| Type | Host | Value |
+|------|------|--------|
+| CNAME | `www` | `wandr-web.onrender.com.` |
+| CNAME | `api` | `wandr-api-d59o.onrender.com.` |
+| URL Redirect (optional) | `@` | `https://www.wandrhere.com` (apex → www) |
+
+Then on Render:
+
+1. **wandr-web** → Custom Domains → add `www.wandrhere.com` (wait until Verified + Certificate Issued)  
+2. **wandr-api** → Custom Domains → add `api.wandrhere.com`  
+3. Apex `wandrhere.com` may stay “Waiting for DNS” if you use URL Redirect instead of A `216.24.57.1` — that is OK while redirecting to www  
+4. **wandr-api** env:  
+   `WANDR_CORS_ORIGINS=https://www.wandrhere.com,https://wandrhere.com,http://localhost:*,http://127.0.0.1:*`  
+   Also set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`  
+5. **wandr-web** env:  
+   `VITE_API_URL=https://api.wandrhere.com`  
+   + `VITE_CLOUDINARY_CLOUD_NAME` / `VITE_CLOUDINARY_API_KEY`  
+6. **Manual Deploy** both services (web must rebuild so Vite bakes the API URL)  
+7. Verify: https://www.wandrhere.com · https://api.wandrhere.com/api/health  
+
+Production URLs: **https://www.wandrhere.com** (site) · **https://api.wandrhere.com** (API)
 
 ## 6. After first deploy
 
@@ -86,7 +106,7 @@ URLs (typical):
 |-----|--------|
 | `DATABASE_URL` | Supabase Postgres URI |
 | `WANDR_JWT_SECRET` | Long random string (32+) |
-| `WANDR_CORS_ORIGINS` | `https://YOUR-WEB,…` |
+| `WANDR_CORS_ORIGINS` | `https://www.wandrhere.com,https://wandrhere.com,…` |
 | `JPA_DDL_AUTO` | `update` |
 | `CLOUDINARY_CLOUD_NAME` | from Cloudinary |
 | `CLOUDINARY_API_KEY` | from Cloudinary |
@@ -96,7 +116,7 @@ URLs (typical):
 
 | Env | Value |
 |-----|--------|
-| `VITE_API_URL` | `https://YOUR-API` |
+| `VITE_API_URL` | `https://api.wandrhere.com` |
 | `VITE_CLOUDINARY_CLOUD_NAME` | from Cloudinary |
 | `VITE_CLOUDINARY_API_KEY` | from Cloudinary (public) |
 | rewrite | `/*` → `/index.html` |
