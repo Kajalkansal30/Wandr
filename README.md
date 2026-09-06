@@ -1,16 +1,40 @@
-# React + Vite
+# Wandr
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Place discovery app — cafés, food spots, and short “Spotted” videos.
 
-Currently, two official plugins are available:
+## Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Layer | Stack |
+|-------|--------|
+| Frontend | React 19 + Vite 8 + Tailwind 4 + React Router 7 |
+| Backend | Spring Boot 3.4 (Java 17) REST API + JWT auth |
+| Database | PostgreSQL (local Docker / Supabase in prod) |
+| Media | Cloudinary (signed direct browser uploads) |
+| Deploy | Render (`render.yaml`) — static web + Docker API |
 
-## React Compiler
+```
+Browser (React SPA)
+  → HTTPS /api/* → Spring Boot (JWT, business logic, Cloudinary signing)
+  → signed upload → Cloudinary (video/image binaries)
+  → Postgres stores metadata + media URLs only
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Local development
 
-## Expanding the Oxlint configuration
+```bash
+# 1. Postgres
+docker compose up -d
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+# 2. Backend (from backend/)
+cp .env.example .env   # fill Cloudinary + optional DATABASE_URL
+./mvnw spring-boot:run
+
+# 3. Frontend (repo root)
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Demo accounts and API details: [`backend/README.md`](backend/README.md)  
+Deploy guide: [`DEPLOY.md`](DEPLOY.md)  
+Media / Cloudinary: [`docs/media-setup.md`](docs/media-setup.md)
