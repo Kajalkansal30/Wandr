@@ -24,7 +24,16 @@ public class ReviewService {
   private final NotificationService notificationService;
 
   public List<ReviewDtos.ReviewResponse> list(Long placeId) {
-    return reviewRepository.findByPlaceIdAndStatusOrderByCreatedAtDesc(placeId, ReviewStatus.APPROVED).stream()
+    return list(placeId, 0, 50);
+  }
+
+  public List<ReviewDtos.ReviewResponse> list(Long placeId, int page, int size) {
+    int safeSize = Math.min(Math.max(size, 1), 100);
+    int safePage = Math.max(page, 0);
+    var pageable = org.springframework.data.domain.PageRequest.of(safePage, safeSize);
+    return reviewRepository
+        .findByPlaceIdAndStatusOrderByCreatedAtDesc(placeId, ReviewStatus.APPROVED, pageable)
+        .stream()
         .map(ReviewDtos.ReviewResponse::from)
         .toList();
   }

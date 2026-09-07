@@ -18,9 +18,13 @@ public class NotificationController {
   private final NotificationService notificationService;
 
   @GetMapping
-  public List<NotificationDtos.NotificationResponse> list(@AuthenticationPrincipal User user) {
+  public List<NotificationDtos.NotificationResponse> list(
+      @AuthenticationPrincipal User user,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size
+  ) {
     requireUser(user);
-    return notificationService.list(user.getId());
+    return notificationService.list(user.getId(), page, size);
   }
 
   @GetMapping("/unread-count")

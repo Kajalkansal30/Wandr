@@ -23,14 +23,16 @@ public class FavoriteService {
   private final PlaceRepository placeRepository;
 
   public List<PlaceDtos.PlaceResponse> list(User user) {
-    return favoriteRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+    var pageable = org.springframework.data.domain.PageRequest.of(0, 100);
+    return favoriteRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable).stream()
         .map(Favorite::getPlace)
         .map(p -> PlaceDtos.PlaceResponse.from(p, null))
         .toList();
   }
 
   public List<Long> ids(User user) {
-    return favoriteRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+    var pageable = org.springframework.data.domain.PageRequest.of(0, 200);
+    return favoriteRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable).stream()
         .map(f -> f.getPlace().getId())
         .toList();
   }

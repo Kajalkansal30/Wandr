@@ -1,7 +1,8 @@
-# Build stage
+# Build stage — cache Maven dependencies separately from source
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY pom.xml .
+RUN mvn -q -B -DskipTests dependency:go-offline
 COPY src src
 RUN mvn -q -B -DskipTests package
 

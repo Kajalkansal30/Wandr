@@ -56,7 +56,15 @@ public class NotificationService {
 
   @Transactional(readOnly = true)
   public List<NotificationDtos.NotificationResponse> list(Long userId) {
-    return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+    return list(userId, 0, 50);
+  }
+
+  @Transactional(readOnly = true)
+  public List<NotificationDtos.NotificationResponse> list(Long userId, int page, int size) {
+    int safeSize = Math.min(Math.max(size, 1), 100);
+    int safePage = Math.max(page, 0);
+    var pageable = org.springframework.data.domain.PageRequest.of(safePage, safeSize);
+    return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable).stream()
         .map(NotificationDtos.NotificationResponse::from)
         .toList();
   }
@@ -77,15 +85,7 @@ public class NotificationService {
 
   @Transactional
   public int markAllRead(Long userId) {
-    List<Notification> unread = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-        .filter(n -> n.getReadAt() == null)
-        .toList();
-    Instant now = Instant.now();
-    for (Notification n : unread) {
-      n.setReadAt(now);
-    }
-    notificationRepository.saveAll(unread);
-    return unread.size();
+    return notificationRepository.markAllRead(userId, Instant.now());
   }
 
   @Transactional(readOnly = true)

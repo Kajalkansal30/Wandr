@@ -2,6 +2,10 @@ import { api } from "./client";
 import { getOrCreateSessionId } from "../utils/preferences";
 
 const QUEUE_KEY = "wandr_analytics_queue";
+const MAX_QUEUE = 100;
+const BATCH_SIZE = 10;
+let flushing = false;
+let backoffMs = 0;
 
 function readQueue() {
   try {
@@ -12,13 +16,11 @@ function readQueue() {
 }
 
 function writeQueue(items) {
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(items.slice(-100)));
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(items.slice(-MAX_QUEUE)));
 }
 
 /**
  * Fire-and-forget analytics. Queues locally if the API is down.
- * eventType: place_view | menu_view | save_place | share_place | direction_click
- *   | call_click | search | filter_used | review_submit | taste_pref
  */
 export async function trackEvent(eventType, { placeId = null, source = null, metadata = {} } = {}) {
   const payload = {
@@ -34,8 +36,10 @@ export async function trackEvent(eventType, { placeId = null, source = null, met
     await api("/api/analytics/events", {
       method: "POST",
       body: payload,
-      auth: true, // token sent if present; endpoint also allows anonymous
+      auth: true,
+      timeoutMs: 5000,
     });
+    backoffMs = 0;
     flushQueue();
   } catch {
     const q = readQueue();
@@ -44,16 +48,49 @@ export async function trackEvent(eventType, { placeId = null, source = null, met
   }
 }
 
-async function flushQueue() {
+export async function flushQueue() {
+  if (flushing) return;
   const q = readQueue();
   if (!q.length) return;
-  const remaining = [];
-  for (const item of q) {
-    try {
-      await api("/api/analytics/events", { method: "POST", body: item, auth: true });
-    } catch {
-      remaining.push(item);
-    }
+  if (backoffMs > 0) {
+    await new Promise((r) => setTimeout(r, backoffMs));
   }
-  writeQueue(remaining);
+  flushing = true;
+  const remaining = [];
+  const batch = q.slice(0, BATCH_SIZE);
+  const rest = q.slice(BATCH_SIZE);
+  try {
+    for (const item of batch) {
+      try {
+        await api("/api/analytics/events", {
+          method: "POST",
+          body: item,
+          auth: true,
+          timeoutMs: 5000,
+        });
+      } catch {
+        remaining.push(item);
+      }
+    }
+    writeQueue([...remaining, ...rest]);
+    if (remaining.length) {
+      backoffMs = Math.min(30_000, Math.max(1000, (backoffMs || 500) * 2));
+    } else {
+      backoffMs = 0;
+      if (rest.length) {
+        flushing = false;
+        return flushQueue();
+      }
+    }
+  } finally {
+    flushing = false;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => flushQueue());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") flushQueue();
+  });
+  setTimeout(() => flushQueue(), 2000);
 }

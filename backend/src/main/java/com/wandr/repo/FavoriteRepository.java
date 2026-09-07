@@ -11,6 +11,10 @@ import java.util.Optional;
 
 public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
   List<Favorite> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+  org.springframework.data.domain.Page<Favorite> findByUserIdOrderByCreatedAtDesc(
+      Long userId, org.springframework.data.domain.Pageable pageable);
+
   Optional<Favorite> findByUserIdAndPlaceId(Long userId, Long placeId);
   boolean existsByUserIdAndPlaceId(Long userId, Long placeId);
   void deleteByUserIdAndPlaceId(Long userId, Long placeId);

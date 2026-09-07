@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { cloudinaryUrl, IMAGE_WIDTH } from "../utils/cloudinary";
 import { Heart, MapPin, Star, Sparkles, Leaf, TrendingUp, HelpCircle, X, Megaphone } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { loadSavedIds, toggleSavedCafe } from "../utils/favorites";
@@ -97,7 +98,7 @@ export default function CafeCard({ cafe, index = 0, featured = false }) {
       <div className={`relative overflow-hidden bg-warm-100 ${featured ? "aspect-[21/10]" : "aspect-[16/10]"}`}>
         {!imgError ? (
           <img
-            src={cafe.image}
+            src={cloudinaryUrl(cafe.image, { width: featured ? IMAGE_WIDTH.cardDesktop : IMAGE_WIDTH.card })}
             alt={cafe.name}
             loading="lazy"
             onError={() => setImgError(true)}

@@ -21,10 +21,15 @@ function resolveApiBase(raw) {
 const API_BASE = resolveApiBase(import.meta.env.VITE_API_URL);
 const ACCESS_KEY = "wandr_access";
 
+const RETRYABLE_STATUS = new Set([408, 429, 502, 503, 504]);
+const IDEMPOTENT = new Set(["GET", "HEAD", "OPTIONS"]);
+
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, code, requestId) {
     super(message);
     this.status = status;
+    this.code = code || null;
+    this.requestId = requestId || null;
   }
 }
 
@@ -54,7 +59,7 @@ async function refreshAccessToken() {
       });
       if (!res.ok) {
         setToken(null);
-        throw new ApiError("Session expired", 401);
+        throw new ApiError("Session expired", 401, "AUTH_ERROR");
       }
       const data = await res.json();
       setToken(data.token);
@@ -66,56 +71,92 @@ async function refreshAccessToken() {
   return refreshPromise;
 }
 
-export async function api(path, { method = "GET", body, auth = false, timeoutMs = 15000, retry = true } = {}) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function parseError(res) {
+  let message = `Request failed (${res.status})`;
+  let code = null;
+  let requestId = res.headers.get("X-Request-Id");
+  try {
+    const data = await res.json();
+    message = data.message || data.error || message;
+    code = data.code || null;
+    requestId = data.requestId || requestId;
+  } catch {
+    /* ignore */
+  }
+  return new ApiError(message, res.status, code, requestId);
+}
+
+/**
+ * @param {string} path
+ * @param {{ method?: string, body?: unknown, auth?: boolean, timeoutMs?: number, retry?: boolean, retries?: number }} opts
+ */
+export async function api(
+  path,
+  { method = "GET", body, auth = false, timeoutMs = 15000, retry = true, retries = 2 } = {}
+) {
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const upper = method.toUpperCase();
+  let attempt = 0;
+  const maxAttempts = IDEMPOTENT.has(upper) ? Math.max(1, retries + 1) : 1;
 
-  let res;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-      credentials: "include",
-    });
-  } catch (err) {
-    if (err?.name === "AbortError") {
-      throw new ApiError("Request timed out — try again", 408);
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  while (attempt < maxAttempts) {
+    attempt += 1;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (res.status === 401 && auth && retry && !path.startsWith("/api/auth/")) {
+    let res;
     try {
-      await refreshAccessToken();
-      return api(path, { method, body, auth, timeoutMs, retry: false });
-    } catch {
-      /* fall through */
+      res = await fetch(`${API_BASE}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+        credentials: "include",
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      const isAbort = err?.name === "AbortError";
+      const apiErr = isAbort
+        ? new ApiError("Request timed out — try again", 408, "TIMEOUT")
+        : new ApiError(err?.message || "Network error", 0, "NETWORK_ERROR");
+      if (IDEMPOTENT.has(upper) && attempt < maxAttempts) {
+        await sleep(attempt === 1 ? 500 : 1500);
+        continue;
+      }
+      throw apiErr;
+    } finally {
+      clearTimeout(timer);
     }
-  }
 
-  if (!res.ok) {
-    let message = `Request failed (${res.status})`;
-    try {
-      const data = await res.json();
-      message = data.message || data.error || message;
-    } catch {
-      /* ignore */
+    if (res.status === 401 && auth && retry && !path.startsWith("/api/auth/")) {
+      try {
+        await refreshAccessToken();
+        return api(path, { method, body, auth, timeoutMs, retry: false, retries: 0 });
+      } catch {
+        /* fall through */
+      }
     }
-    throw new ApiError(message, res.status);
-  }
 
-  if (res.status === 204) return null;
-  return res.json();
+    if (!res.ok) {
+      if (IDEMPOTENT.has(upper) && RETRYABLE_STATUS.has(res.status) && attempt < maxAttempts) {
+        await sleep(attempt === 1 ? 500 : 1500);
+        continue;
+      }
+      throw await parseError(res);
+    }
+
+    if (res.status === 204) return null;
+    return res.json();
+  }
 }
 
 export { API_BASE, refreshAccessToken };

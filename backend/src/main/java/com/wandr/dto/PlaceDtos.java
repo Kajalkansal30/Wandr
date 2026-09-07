@@ -222,4 +222,13 @@ public class PlaceDtos {
           .toList();
     }
   }
+
+  public record PlacePageResponse(
+      List<PlaceResponse> items,
+      int page,
+      int size,
+      long totalElements,
+      int totalPages,
+      boolean hasMore
+  ) {}
 }

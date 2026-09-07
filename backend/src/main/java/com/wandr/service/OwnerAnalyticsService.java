@@ -41,7 +41,13 @@ public class OwnerAnalyticsService {
     if (days < 1) days = 1;
     if (days > 90) days = 90;
 
-    List<Place> owned = placeRepository.findByOwnerIdOrderByCreatedAtDesc(owner.getId());
+    // Cap owned places for analytics dashboards (owners rarely have hundreds of listings)
+    List<Place> owned = placeRepository
+        .findByOwnerIdOrderByCreatedAtDesc(
+            owner.getId(),
+            org.springframework.data.domain.PageRequest.of(0, 100)
+        )
+        .getContent();
     if (placeIdFilter != null) {
       owned = owned.stream().filter(p -> p.getId().equals(placeIdFilter)).toList();
       if (owned.isEmpty()) {

@@ -54,8 +54,9 @@ Then open `/admin` (or Profile → Command Center).
 
 ## Useful endpoints
 ```
-GET  /api/health
-GET  /api/places
+GET  /api/health          (liveness — no DB)
+GET  /api/ready           (readiness — DB SELECT 1; Render healthCheckPath)
+GET  /api/places?page=0&size=30&lat=&lng=
 GET  /api/places/{id}
 POST /api/auth/login     { "email", "password" }
 POST /api/auth/signup    { "email", "password", "displayName", "role" }

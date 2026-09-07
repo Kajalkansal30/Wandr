@@ -54,56 +54,70 @@ export async function fetchSpottedFeed({ lat, lng, filter = "all", limit } = {})
     if (filter) params.set("filter", filter);
     if (limit != null) params.set("limit", String(limit));
     const q = params.toString();
-    const data = await api(`/api/spotted/feed${q ? `?${q}` : ""}`, { auth: Boolean(getToken()) });
+    const data = await api(`/api/spotted/feed${q ? `?${q}` : ""}`, {
+      auth: Boolean(getToken()),
+      timeoutMs: 15000,
+    });
     return (data || []).map(mapSpot);
   } catch (err) {
-    console.warn("Spotted feed API failed, using demo spots:", err.message);
-    return getDemoSpots({ filter, lat, lng });
+    if (import.meta.env.DEV) {
+      console.warn("Spotted feed API failed, using demo spots (dev only):", err.message);
+      return getDemoSpots({ filter, lat, lng });
+    }
+    throw err;
   }
 }
 
 export async function fetchPlaceSpots(placeId) {
   try {
-    const data = await api(`/api/places/${placeId}/spots`, { auth: Boolean(getToken()) });
+    const data = await api(`/api/places/${placeId}/spots`, {
+      auth: Boolean(getToken()),
+      timeoutMs: 12000,
+    });
     return (data || []).map(mapSpot);
-  } catch {
-    return getDemoSpotsForPlace(placeId);
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      return getDemoSpotsForPlace(placeId);
+    }
+    throw err;
   }
 }
 
 export async function createSpot(body) {
   try {
-    const data = await api("/api/spotted", { method: "POST", auth: true, body });
+    const data = await api("/api/spotted", { method: "POST", auth: true, body, timeoutMs: 30000 });
     return mapSpot(data);
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) throw err;
-    console.warn("Create spot API failed, saving locally:", err.message);
-    return addDemoSpot({
-      placeId: body.placeId,
-      url: body.url,
-      thumbnailUrl: body.thumbnailUrl,
-      caption: body.caption,
-      spotKind: body.spotKind,
-    });
+    if (import.meta.env.DEV) {
+      console.warn("Create spot API failed, saving locally (dev only):", err.message);
+      return addDemoSpot({
+        placeId: body.placeId,
+        url: body.url,
+        thumbnailUrl: body.thumbnailUrl,
+        caption: body.caption,
+        spotKind: body.spotKind,
+      });
+    }
+    throw err;
   }
 }
 
 export async function toggleSpotLike(id) {
   try {
     return await api(`/api/spotted/${id}/like`, { method: "POST", auth: true });
-  } catch {
-    return toggleDemoLike(id);
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      return toggleDemoLike(id);
+    }
+    throw err;
   }
 }
 
 export async function reportSpot(id, reason, note) {
-  try {
-    return await api(`/api/spotted/${id}/report`, {
-      method: "POST",
-      auth: true,
-      body: { reason, note },
-    });
-  } catch {
-    return null;
-  }
+  return api(`/api/spotted/${id}/report`, {
+    method: "POST",
+    auth: true,
+    body: { reason, note },
+  });
 }

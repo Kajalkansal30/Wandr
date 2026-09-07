@@ -10,7 +10,7 @@ Place discovery app — cafés, food spots, and short “Spotted” videos.
 | Backend | Spring Boot 3.4 (Java 17) REST API + JWT auth |
 | Database | PostgreSQL (local Docker / Supabase in prod) |
 | Media | Cloudinary (signed direct browser uploads) |
-| Deploy | Render (`render.yaml`) — static web + Docker API |
+| Deploy | Render (`render.yaml`) — static web + Docker API (**Free** for now; upgrade to `1c-2g` for 24/7 — see [`DEPLOY.md`](DEPLOY.md)) |
 
 ```
 Browser (React SPA)

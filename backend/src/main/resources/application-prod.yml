@@ -1,5 +1,13 @@
 # Production profile — set SPRING_PROFILES_ACTIVE=prod on Render
 spring:
+  datasource:
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL:10}
+      minimum-idle: ${HIKARI_MIN_IDLE:2}
+      connection-timeout: 5000
+      validation-timeout: 2000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:validate}
@@ -7,6 +15,22 @@ spring:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 0
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  endpoints:
+    web:
+      exposure:
+        include: health
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
 
 wandr:
   jwt:

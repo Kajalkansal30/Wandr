@@ -72,7 +72,7 @@ export default function HomePage() {
   const [areaOpen, setAreaOpen] = useState(false);
   const [customArea, setCustomArea] = useState("");
   const { user } = useAuth();
-  const { places: allPlaces, loading: placesLoading } = usePlaces();
+  const { places: allPlaces, loading: placesLoading, error: placesError, reload: reloadPlaces } = usePlaces();
   const [savedIds, setSavedIds] = useState([]);
   const [tastePrefs, setTastePrefs] = useState(() => loadTastePrefs());
   const [signalIndex, setSignalIndex] = useState(0);
@@ -199,6 +199,21 @@ export default function HomePage() {
   return (
     <>
       <main className="discover-canvas page-with-nav">
+        {placesError && !placesLoading && (
+          <div className="page-shell pt-6">
+            <div className="rounded-xl border border-warm-200 bg-white px-4 py-6 text-center shadow-sm">
+              <p className="text-warm-800 font-medium">Unable to load Wandr places</p>
+              <p className="mt-1 text-sm text-warm-500">{placesError}</p>
+              <button
+                type="button"
+                onClick={() => reloadPlaces()}
+                className="mt-4 rounded-full bg-warm-800 px-4 py-2 text-sm font-semibold text-cream"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
         {showHero && (
           <section className="discover-hero" aria-label="Discover">
             <svg

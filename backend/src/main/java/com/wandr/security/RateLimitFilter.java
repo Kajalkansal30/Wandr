@@ -37,6 +37,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
   };
 
   private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+  private static final int MAX_BUCKETS = 10_000;
 
   @Override
   protected void doFilterInternal(
@@ -48,12 +49,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
     if (rule != null) {
       String ip = clientIp(request);
       String key = rule.method + ":" + rule.pattern + ":" + ip;
+      if (buckets.size() > MAX_BUCKETS) {
+        buckets.clear();
+      }
       Bucket bucket = buckets.computeIfAbsent(key, k -> newBucket(rule.capacity, rule.period));
       if (!bucket.tryConsume(1)) {
         response.setStatus(429);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getOutputStream().write(
-            "{\"message\":\"Too many requests. Please try again later.\"}".getBytes(StandardCharsets.UTF_8)
+            "{\"status\":429,\"code\":\"RATE_LIMITED\",\"message\":\"Too many requests. Please try again later.\"}"
+                .getBytes(StandardCharsets.UTF_8)
         );
         return;
       }
@@ -80,12 +85,37 @@ public class RateLimitFilter extends OncePerRequestFilter {
     return Bucket.builder().addLimit(limit).build();
   }
 
+  /**
+   * Client IP for rate limiting.
+   * Prefer Render's {@code True-Client-Ip} / rightmost trusted hop.
+   * Only use X-Forwarded-For when remote addr is a private/proxy hop (do not trust raw client XFF alone).
+   * NOTE: in-memory buckets are per-instance — use Redis before horizontal scale.
+   */
   static String clientIp(HttpServletRequest request) {
+    String trueClient = request.getHeader("True-Client-Ip");
+    if (trueClient != null && !trueClient.isBlank()) {
+      return trueClient.trim();
+    }
+    String remote = request.getRemoteAddr();
     String xff = request.getHeader("X-Forwarded-For");
-    if (xff != null && !xff.isBlank()) {
-      String first = xff.split(",")[0].trim();
+    if (xff != null && !xff.isBlank() && isProxyHop(remote)) {
+      String[] parts = xff.split(",");
+      String first = parts[0].trim();
       if (!first.isEmpty()) return first;
     }
-    return request.getRemoteAddr();
+    return remote != null ? remote : "unknown";
+  }
+
+  private static boolean isProxyHop(String addr) {
+    if (addr == null || addr.isBlank()) return false;
+    return addr.startsWith("10.")
+        || addr.startsWith("192.168.")
+        || addr.startsWith("172.16.")
+        || addr.startsWith("172.17.")
+        || addr.startsWith("172.18.")
+        || addr.startsWith("172.19.")
+        || addr.startsWith("127.")
+        || "0:0:0:0:0:0:0:1".equals(addr)
+        || "::1".equals(addr);
   }
 }

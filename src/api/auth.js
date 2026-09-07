@@ -23,6 +23,7 @@ export async function loginRequest(email, password) {
   const data = await api("/api/auth/login", {
     method: "POST",
     body: { email, password },
+    timeoutMs: 15000,
   });
   return toSession(data);
 }
@@ -36,6 +37,7 @@ export async function signupRequest(email, password, displayName) {
       displayName,
       role: "USER",
     },
+    timeoutMs: 20000,
   });
   return toSession(data);
 }

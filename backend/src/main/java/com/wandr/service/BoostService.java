@@ -113,10 +113,33 @@ public class BoostService {
     );
   }
 
+  private static final long BOOST_CACHE_TTL_MS = 45_000L;
+  private volatile Map<Long, BoostCampaign> boostCache = Map.of();
+  private volatile long boostCacheExpiresAt = 0L;
+
   /** Active campaigns for public discovery enrichment. Does not mutate rows (safe in read-only tx). */
   public Map<Long, BoostCampaign> activeByPlaceId() {
+    long nowMs = System.currentTimeMillis();
+    if (nowMs < boostCacheExpiresAt && !boostCache.isEmpty()) {
+      return boostCache;
+    }
     Map<Long, BoostCampaign> map = new LinkedHashMap<>();
     for (BoostCampaign c : boostCampaignRepository.findActive(BoostStatus.ACTIVE, Instant.now())) {
+      map.putIfAbsent(c.getPlaceId(), c);
+    }
+    boostCache = Map.copyOf(map);
+    boostCacheExpiresAt = nowMs + BOOST_CACHE_TTL_MS;
+    return map;
+  }
+
+  /** Scoped enrichment for a page of place IDs (falls back to full cached map when empty). */
+  public Map<Long, BoostCampaign> activeByPlaceIds(Collection<Long> placeIds) {
+    if (placeIds == null || placeIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<Long, BoostCampaign> map = new LinkedHashMap<>();
+    for (BoostCampaign c : boostCampaignRepository.findActiveForPlaces(
+        placeIds, BoostStatus.ACTIVE, Instant.now())) {
       map.putIfAbsent(c.getPlaceId(), c);
     }
     return map;

@@ -1,11 +1,12 @@
 const AREA_KEY = "wandr_explore_area";
 
+/** Approx centroids for discovery lat/lng (India-facing defaults). */
 export const EXPLORE_AREAS = [
-  { id: "current", label: "Current location", city: null },
-  { id: "delhi", label: "Delhi", city: "Delhi" },
-  { id: "gurgaon", label: "Gurgaon", city: "Gurgaon" },
-  { id: "mumbai", label: "Mumbai", city: "Mumbai" },
-  { id: "bangalore", label: "Bangalore", city: "Bangalore" },
+  { id: "current", label: "Current location", city: null, lat: null, lng: null },
+  { id: "delhi", label: "Delhi", city: "Delhi", lat: 28.6139, lng: 77.209 },
+  { id: "gurgaon", label: "Gurgaon", city: "Gurgaon", lat: 28.4595, lng: 77.0266 },
+  { id: "mumbai", label: "Mumbai", city: "Mumbai", lat: 19.076, lng: 72.8777 },
+  { id: "bangalore", label: "Bangalore", city: "Bangalore", lat: 12.9716, lng: 77.5946 },
 ];
 
 export function loadExploreArea() {

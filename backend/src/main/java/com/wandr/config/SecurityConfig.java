@@ -60,7 +60,7 @@ public class SecurityConfig {
             .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
             .requestMatchers("/error").permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            .requestMatchers("/api/health").permitAll()
+            .requestMatchers("/api/health", "/api/ready", "/actuator/health", "/actuator/health/**").permitAll()
             .requestMatchers(
                 HttpMethod.POST,
                 "/api/auth/login",
@@ -122,7 +122,7 @@ public class SecurityConfig {
     }
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
-    config.setExposedHeaders(List.of("*"));
+    config.setExposedHeaders(List.of("*", "X-Request-Id"));
     config.setAllowCredentials(true);
     config.setMaxAge(3600L);
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,17 @@ public interface BoostCampaignRepository extends JpaRepository<BoostCampaign, Lo
       ORDER BY b.createdAt DESC
       """)
   List<BoostCampaign> findActive(@Param("status") BoostStatus status, @Param("now") Instant now);
+
+  @Query("""
+      SELECT b FROM BoostCampaign b
+      WHERE b.placeId IN :placeIds AND b.status = :status AND b.endsAt > :now
+      ORDER BY b.createdAt DESC
+      """)
+  List<BoostCampaign> findActiveForPlaces(
+      @Param("placeIds") Collection<Long> placeIds,
+      @Param("status") BoostStatus status,
+      @Param("now") Instant now
+  );
 
   @Query("""
       SELECT b FROM BoostCampaign b

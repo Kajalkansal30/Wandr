@@ -1,3 +1,4 @@
+import { cloudinaryUrl, IMAGE_WIDTH } from "../utils/cloudinary";
 import { api } from "./client";
 
 /** Map API place → shape used by CafeCard / detail / map. */
@@ -10,6 +11,8 @@ export function mapPlace(p) {
   const verifiedDetails = Array.isArray(p.verifiedDetails)
     ? p.verifiedDetails
     : buildTrustDetails(p, verified, ownershipStatus);
+  const rawImage = p.image || "";
+  const image = rawImage ? cloudinaryUrl(rawImage, { width: IMAGE_WIDTH.cardDesktop }) : "";
 
   return {
     id: String(p.id),
@@ -21,8 +24,9 @@ export function mapPlace(p) {
     address: p.address || "",
     city: p.city || "",
     serviceArea: p.serviceArea || null,
-    image: p.image || "",
-    photos: p.image ? [p.image] : [],
+    image,
+    imageDetail: rawImage ? cloudinaryUrl(rawImage, { width: IMAGE_WIDTH.detail }) : "",
+    photos: image ? [image] : [],
     phone: p.phone || null,
     whatsapp: p.whatsapp || null,
     website: p.website || null,
@@ -100,13 +104,35 @@ function buildTrustDetails(p, verified, ownershipStatus) {
   return list;
 }
 
-export async function fetchPlaces(lat, lng) {
+export async function fetchPlaces({ lat, lng, radius, category, search, page = 0, size = 30 } = {}) {
   const params = new URLSearchParams();
   if (lat != null) params.set("lat", lat);
   if (lng != null) params.set("lng", lng);
-  const q = params.toString();
-  const data = await api(`/api/places${q ? `?${q}` : ""}`);
-  return (data || []).map(mapPlace);
+  if (radius != null) params.set("radius", radius);
+  if (category) params.set("category", category);
+  if (search) params.set("search", search);
+  params.set("page", String(page));
+  params.set("size", String(size));
+  const data = await api(`/api/places?${params}`, { timeoutMs: 15000 });
+  // Support page DTO and legacy array responses
+  if (Array.isArray(data)) {
+    return {
+      items: data.map(mapPlace),
+      page: 0,
+      size: data.length,
+      totalElements: data.length,
+      totalPages: 1,
+      hasMore: false,
+    };
+  }
+  return {
+    items: (data?.items || []).map(mapPlace),
+    page: data?.page ?? page,
+    size: data?.size ?? size,
+    totalElements: data?.totalElements ?? 0,
+    totalPages: data?.totalPages ?? 0,
+    hasMore: Boolean(data?.hasMore),
+  };
 }
 
 export async function fetchPlace(id, lat, lng) {
@@ -114,7 +140,7 @@ export async function fetchPlace(id, lat, lng) {
   if (lat != null) params.set("lat", lat);
   if (lng != null) params.set("lng", lng);
   const q = params.toString();
-  const data = await api(`/api/places/${id}${q ? `?${q}` : ""}`);
+  const data = await api(`/api/places/${id}${q ? `?${q}` : ""}`, { timeoutMs: 12000 });
   return mapPlace(data);
 }
 

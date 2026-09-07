@@ -2,6 +2,7 @@ package com.wandr.service;
 
 import com.wandr.domain.*;
 import com.wandr.dto.PlaceDtos;
+import com.wandr.repo.PlaceGeoRepository;
 import com.wandr.repo.PlaceRepository;
 import com.wandr.security.VerifiedEmailGuard;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,16 +25,86 @@ public class PlaceService {
       "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&q=80";
 
   private final PlaceRepository placeRepository;
+  private final PlaceGeoRepository placeGeoRepository;
   private final BoostService boostService;
 
   @Transactional(readOnly = true)
-  public List<PlaceDtos.PlaceResponse> listApproved(Double lat, Double lng) {
-    var activeBoosts = boostService.activeByPlaceId();
-    return placeRepository.findByStatusWithOwner(PlaceStatus.APPROVED).stream()
-        .filter(p -> p.getOperatingStatus() != OperatingStatus.PERMANENTLY_CLOSED)
-        .map(p -> boostService.enrich(p, distanceKm(lat, lng, p.getLat(), p.getLng()), activeBoosts))
-        .sorted(Comparator.comparing(r -> r.distance() == null ? Double.MAX_VALUE : r.distance()))
+  public PlaceDtos.PlacePageResponse listApproved(
+      Double lat,
+      Double lng,
+      Double radiusKm,
+      String category,
+      String search,
+      int page,
+      int size
+  ) {
+    int safeSize = Math.min(Math.max(size, 1), 50);
+    int safePage = Math.max(page, 0);
+    String cat = blankToNull(category);
+    String q = blankToNull(search);
+
+    if (lat != null && lng != null) {
+      int offset = safePage * safeSize;
+      List<Long> ids = placeGeoRepository.findNearbyIds(
+          lat, lng, radiusKm, cat, q == null ? "" : q, safeSize, offset);
+      long total = placeGeoRepository.countNearby(lat, lng, radiusKm, cat, q == null ? "" : q);
+      List<Place> places = ids.isEmpty()
+          ? List.of()
+          : placeRepository.findByIdInWithOwner(ids);
+      Map<Long, Place> byId = places.stream()
+          .collect(Collectors.toMap(Place::getId, p -> p, (a, b) -> a));
+      List<Place> ordered = ids.stream().map(byId::get).filter(Objects::nonNull).toList();
+      var activeBoosts = boostService.activeByPlaceIds(ids);
+      List<PlaceDtos.PlaceResponse> mapped = ordered.stream()
+          .map(p -> boostService.enrich(p, distanceKm(lat, lng, p.getLat(), p.getLng()), activeBoosts))
+          .toList();
+      int totalPages = (int) Math.ceil(total / (double) safeSize);
+      return new PlaceDtos.PlacePageResponse(
+          mapped, safePage, safeSize, total, totalPages, safePage + 1 < totalPages);
+    }
+
+    var pageable = org.springframework.data.domain.PageRequest.of(
+        safePage,
+        safeSize,
+        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")
+    );
+
+    var result = placeRepository.findDiscoverable(
+        PlaceStatus.APPROVED,
+        OperatingStatus.PERMANENTLY_CLOSED,
+        cat,
+        q,
+        pageable
+    );
+
+    List<Place> places = result.getContent();
+    if (!places.isEmpty()) {
+      List<Long> ids = places.stream().map(Place::getId).toList();
+      Map<Long, Place> withOwner = placeRepository.findByIdInWithOwner(ids).stream()
+          .collect(Collectors.toMap(Place::getId, p -> p, (a, b) -> a));
+      places = ids.stream().map(id -> withOwner.getOrDefault(id, null)).filter(Objects::nonNull).toList();
+    }
+
+    var activeBoosts = boostService.activeByPlaceIds(places.stream().map(Place::getId).toList());
+
+    List<PlaceDtos.PlaceResponse> mapped = places.stream()
+        .map(p -> boostService.enrich(p, null, activeBoosts))
         .toList();
+
+    return new PlaceDtos.PlacePageResponse(
+        mapped,
+        safePage,
+        safeSize,
+        result.getTotalElements(),
+        result.getTotalPages(),
+        result.hasNext()
+    );
+  }
+
+  /** @deprecated Prefer {@link #listApproved(Double, Double, Double, String, String, int, int)} */
+  @Transactional(readOnly = true)
+  public List<PlaceDtos.PlaceResponse> listApproved(Double lat, Double lng) {
+    return listApproved(lat, lng, null, null, null, 0, 50).items();
   }
 
   @Transactional(readOnly = true)
@@ -41,7 +114,11 @@ public class PlaceService {
     if (place.getStatus() != PlaceStatus.APPROVED) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found");
     }
-    return boostService.enrich(place, distanceKm(lat, lng, place.getLat(), place.getLng()), boostService.activeByPlaceId());
+    return boostService.enrich(
+        place,
+        distanceKm(lat, lng, place.getLat(), place.getLng()),
+        boostService.activeByPlaceIds(List.of(place.getId()))
+    );
   }
 
   @Transactional(readOnly = true)
@@ -54,8 +131,8 @@ public class PlaceService {
   @Transactional(readOnly = true)
   public List<PlaceDtos.PlaceResponse> listByStatus(PlaceStatus status) {
     if (status == PlaceStatus.PENDING_REVIEW || status == PlaceStatus.PENDING) {
-      return placeRepository.findAll().stream()
-          .filter(p -> p.getStatus() != null && p.getStatus().isPendingReview())
+      return placeRepository.findByStatusInOrderByCreatedAtDesc(
+              List.of(PlaceStatus.PENDING_REVIEW, PlaceStatus.PENDING)).stream()
           .sorted(Comparator.comparing(Place::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
           .map(p -> PlaceDtos.PlaceResponse.from(p, null))
           .toList();
@@ -67,9 +144,8 @@ public class PlaceService {
 
   public long countByStatus(PlaceStatus status) {
     if (status == PlaceStatus.PENDING_REVIEW || status == PlaceStatus.PENDING) {
-      return placeRepository.findAll().stream()
-          .filter(p -> p.getStatus() != null && p.getStatus().isPendingReview())
-          .count();
+      return placeRepository.findByStatusInOrderByCreatedAtDesc(
+              List.of(PlaceStatus.PENDING_REVIEW, PlaceStatus.PENDING)).size();
     }
     return placeRepository.countByStatus(status);
   }

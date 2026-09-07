@@ -1,6 +1,8 @@
-# Wandr on Render — API (Docker) + static frontend
-# Database: Supabase Postgres (set DATABASE_URL in the dashboard)
+# Wandr on Render — API (Docker) + static frontend (free CDN)
+# Database: Supabase Session pooler URI (IPv4) as DATABASE_URL in the dashboard
 # Media: Cloudinary (signed uploads via Spring)
+# Current: Free API (spins down after idle). Upgrade to plan: 1c-2g when you need 24/7.
+# Region matches live Free service (Oregon). Move to singapore only when recreating the service.
 # https://render.com/docs/blueprint-spec
 
 services:
@@ -11,7 +13,7 @@ services:
     region: oregon
     rootDir: backend
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/health
+    healthCheckPath: /api/ready
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod

@@ -30,8 +30,14 @@ public class SpottedService {
     int lim = limit == null || limit < 1 ? 40 : Math.min(limit, 100);
     String f = filter == null ? "all" : filter.trim().toLowerCase();
 
+    // Bound DB scan — do not load every approved video into memory
+    int scanLimit = Math.min(Math.max(lim * 5, 80), 250);
     List<PlaceMedia> media = placeMediaRepository
-        .findByStatusAndMediaTypeOrderByCreatedAtDesc(MediaStatus.APPROVED, MediaType.VIDEO);
+        .findByStatusAndMediaTypeOrderByCreatedAtDesc(
+            MediaStatus.APPROVED,
+            MediaType.VIDEO,
+            org.springframework.data.domain.PageRequest.of(0, scanLimit)
+        );
 
     Set<Long> placeIds = media.stream().map(PlaceMedia::getPlaceId).collect(Collectors.toSet());
     Map<Long, Place> places = placeRepository.findAllById(placeIds).stream()

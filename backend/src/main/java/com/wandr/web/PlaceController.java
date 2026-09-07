@@ -5,12 +5,14 @@ import com.wandr.dto.*;
 import com.wandr.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,17 +24,20 @@ public class PlaceController {
   private final ReviewService reviewService;
   private final MediaService mediaService;
 
-  @GetMapping("/api/health")
-  public Map<String, String> health() {
-    return Map.of("status", "ok", "service", "wandr-backend");
-  }
-
   @GetMapping("/api/places")
-  public List<PlaceDtos.PlaceResponse> list(
+  public ResponseEntity<PlaceDtos.PlacePageResponse> list(
       @RequestParam(required = false) Double lat,
-      @RequestParam(required = false) Double lng
+      @RequestParam(required = false) Double lng,
+      @RequestParam(required = false) Double radius,
+      @RequestParam(required = false) String category,
+      @RequestParam(required = false) String search,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "30") int size
   ) {
-    return placeService.listApproved(lat, lng);
+    PlaceDtos.PlacePageResponse body = placeService.listApproved(lat, lng, radius, category, search, page, size);
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.maxAge(30, TimeUnit.SECONDS).cachePublic())
+        .body(body);
   }
 
   @GetMapping("/api/places/{id}")
@@ -82,8 +87,12 @@ public class PlaceController {
   }
 
   @GetMapping("/api/places/{id}/reviews")
-  public List<ReviewDtos.ReviewResponse> reviews(@PathVariable Long id) {
-    return reviewService.list(id);
+  public List<ReviewDtos.ReviewResponse> reviews(
+      @PathVariable Long id,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size
+  ) {
+    return reviewService.list(id, page, size);
   }
 
   @PostMapping("/api/places/{id}/reviews")
