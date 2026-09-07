@@ -53,8 +53,18 @@ export async function clearTokens() {
 const RETRYABLE = new Set([408, 429, 502, 503, 504]);
 const IDEMPOTENT = new Set(["GET", "HEAD", "OPTIONS"]);
 
+/** Free Render cold starts often exceed 15s — keep mobile waits longer. */
+const DEFAULT_TIMEOUT_MS = 45000;
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function isAbortError(err: any): boolean {
+  if (!err) return false;
+  if (err.name === "AbortError") return true;
+  const msg = String(err.message || err).toLowerCase();
+  return msg.includes("aborted") || msg.includes("canceled") || msg.includes("cancelled");
 }
 
 async function parseError(res: Response): Promise<ApiError> {
@@ -115,7 +125,7 @@ export async function api(path: string, opts: ApiOpts = {}): Promise<any> {
     method = "GET",
     body,
     auth = false,
-    timeoutMs = 15000,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
     retry = true,
     retries = 2,
   } = opts;
@@ -145,12 +155,16 @@ export async function api(path: string, opts: ApiOpts = {}): Promise<any> {
       });
     } catch (err: any) {
       clearTimeout(timer);
-      const isAbort = err?.name === "AbortError";
-      const apiErr = isAbort
-        ? new ApiError("Request timed out — try again", 408, "TIMEOUT")
+      const aborted = isAbortError(err);
+      const apiErr = aborted
+        ? new ApiError(
+            "API is waking up (cold start) — tap Retry in a few seconds",
+            408,
+            "TIMEOUT"
+          )
         : new ApiError(err?.message || "Network error", 0, "NETWORK_ERROR");
       if (IDEMPOTENT.has(upper) && attempt < maxAttempts) {
-        await sleep(attempt === 1 ? 500 : 1500);
+        await sleep(attempt === 1 ? 800 : 2000);
         continue;
       }
       throw apiErr;
@@ -169,7 +183,7 @@ export async function api(path: string, opts: ApiOpts = {}): Promise<any> {
 
     if (!res.ok) {
       if (IDEMPOTENT.has(upper) && RETRYABLE.has(res.status) && attempt < maxAttempts) {
-        await sleep(attempt === 1 ? 500 : 1500);
+        await sleep(attempt === 1 ? 800 : 2000);
         continue;
       }
       throw await parseError(res);

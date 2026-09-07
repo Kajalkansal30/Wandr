@@ -13,7 +13,7 @@ export async function fetchSpottedFeed(params: {
   if (params.filter) q.set("filter", params.filter);
   if (params.limit != null) q.set("limit", String(params.limit));
   const qs = q.toString();
-  return api(`/api/spotted/feed${qs ? `?${qs}` : ""}`, { auth: true });
+  return api(`/api/spotted/feed${qs ? `?${qs}` : ""}`, { auth: true, timeoutMs: 60000 });
 }
 
 export async function createSpot(body: Record<string, unknown>) {
