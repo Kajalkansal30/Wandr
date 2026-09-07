@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Dimensions,
   FlatList,
   Image,
@@ -11,7 +12,6 @@ import {
   ViewToken,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { fetchSpottedFeed, toggleSpotLike } from "../../src/api/spotted";
@@ -124,7 +124,13 @@ export default function SpottedScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const focused = useIsFocused();
+  const [appActive, setAppActive] = useState(true);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      setAppActive(state === "active");
+    });
+    return () => sub.remove();
+  }, []);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -228,7 +234,7 @@ export default function SpottedScreen() {
           renderItem={({ item }) => (
             <MemoSpot
               item={item}
-              active={focused && activeId === item.id}
+              active={appActive && activeId === item.id}
               height={pageHeight}
               user={Boolean(user)}
               onLike={handleLike}
