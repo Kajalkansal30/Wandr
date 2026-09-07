@@ -29,3 +29,14 @@ backend/.idea/
 .env
 backend/.env
 backend-tmp/
+
+# Mobile (Expo)
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/ios/
+mobile/android/
+mobile/.env
+mobile/.env*.local
+mobile/expo-env.d.ts
+

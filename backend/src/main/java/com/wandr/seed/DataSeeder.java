@@ -28,6 +28,7 @@ public class DataSeeder implements CommandLineRunner {
   private final AnalyticsEventRepository analyticsEventRepository;
   private final BoostCampaignRepository boostCampaignRepository;
   private final PlaceMediaRepository placeMediaRepository;
+  private final com.wandr.repo.ReviewRepository reviewRepository;
   private final PasswordEncoder passwordEncoder;
 
   @Override
@@ -35,8 +36,28 @@ public class DataSeeder implements CommandLineRunner {
     seedUsers();
     seedPlaces();
     backfillPlaceTrustFields();
+    seedDemoReviews();
     seedDemoAnalyticsAndBoost();
     seedSpots();
+  }
+
+  private void seedDemoReviews() {
+    User reviewer = userRepository.findByEmailIgnoreCase("user@wandr.test").orElse(null);
+    if (reviewer == null) return;
+    placeRepository.findByNameIgnoreCase("Moon & Moss Café").ifPresent(place -> {
+      if (reviewRepository.findByUserIdAndPlaceId(reviewer.getId(), place.getId()).isPresent()) return;
+      reviewRepository.save(Review.builder()
+          .placeId(place.getId())
+          .userId(reviewer.getId())
+          .userDisplayName(reviewer.getDisplayName())
+          .rating(5)
+          .text("Quiet pour-overs and soft light — worth discovering.")
+          .status(ReviewStatus.APPROVED)
+          .build());
+      place.setReviewCount(1);
+      place.setRating(5.0);
+      placeRepository.save(place);
+    });
   }
 
   private void backfillPlaceTrustFields() {

@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "Wandr",
+    "slug": "wandr",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "wandr",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wandrhere.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Wandr uses your location to show nearby places.",
+        "NSCameraUsageDescription": "Wandr uses the camera for Spotted videos and photos.",
+        "NSMicrophoneUsageDescription": "Wandr records audio with Spotted videos.",
+        "NSPhotoLibraryUsageDescription": "Wandr needs photo access to upload Spotted media."
+      }
+    },
+    "android": {
+      "package": "com.wandrhere.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F3EE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Wandr to use your location for nearby places."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Wandr to use the camera for Spotted videos.",
+          "microphonePermission": "Allow Wandr to record audio with Spotted videos.",
+          "recordAudioAndroid": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "replace-with-eas-project-id"
+      }
+    }
+  }
+}

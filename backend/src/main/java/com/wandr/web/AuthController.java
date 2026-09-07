@@ -24,6 +24,7 @@ import java.time.Duration;
 public class AuthController {
 
   public static final String REFRESH_COOKIE = "wandr_refresh";
+  public static final String REFRESH_HEADER = "X-Refresh-Token";
 
   private final AuthService authService;
 
@@ -81,16 +82,28 @@ public class AuthController {
   }
 
   @PostMapping("/refresh")
-  public AuthDtos.RefreshResponse refresh(HttpServletRequest request, HttpServletResponse response) {
-    String raw = readRefreshCookie(request);
+  public AuthDtos.RefreshResponse refresh(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      @RequestBody(required = false) AuthDtos.RefreshRequest body
+  ) {
+    String raw = resolveRefreshToken(request, body);
     AuthService.AuthResult result = authService.refresh(raw);
     setRefreshCookie(response, result.refreshToken());
-    return new AuthDtos.RefreshResponse(result.response().token(), result.response().emailVerified());
+    return new AuthDtos.RefreshResponse(
+        result.response().token(),
+        result.response().emailVerified(),
+        result.refreshToken()
+    );
   }
 
   @PostMapping("/logout")
-  public AuthDtos.MessageResponse logout(HttpServletRequest request, HttpServletResponse response) {
-    authService.logout(readRefreshCookie(request));
+  public AuthDtos.MessageResponse logout(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      @RequestBody(required = false) AuthDtos.RefreshRequest body
+  ) {
+    authService.logout(resolveRefreshToken(request, body));
     clearRefreshCookie(response);
     return new AuthDtos.MessageResponse("Logged out");
   }
@@ -140,6 +153,18 @@ public class AuthController {
         .sameSite(secure ? "None" : "Lax")
         .build();
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+  }
+
+  /** Cookie (web) → X-Refresh-Token header → JSON body (mobile). */
+  private static String resolveRefreshToken(HttpServletRequest request, AuthDtos.RefreshRequest body) {
+    String fromCookie = readRefreshCookie(request);
+    if (fromCookie != null && !fromCookie.isBlank()) return fromCookie;
+    String header = request.getHeader(REFRESH_HEADER);
+    if (header != null && !header.isBlank()) return header.trim();
+    if (body != null && body.refreshToken() != null && !body.refreshToken().isBlank()) {
+      return body.refreshToken().trim();
+    }
+    return null;
   }
 
   private static String readRefreshCookie(HttpServletRequest request) {

@@ -219,7 +219,8 @@ public class AuthService {
         user.getEmail(),
         user.getDisplayName(),
         user.getRole().name(),
-        user.isEmailVerified()
+        user.isEmailVerified(),
+        refresh
     );
     return new AuthResult(response, refresh);
   }

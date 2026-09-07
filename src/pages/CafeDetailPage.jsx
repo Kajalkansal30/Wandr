@@ -498,11 +498,6 @@ export default function CafeDetailPage() {
 
         {activeTab === "Reviews" && (
           <div id="reviews">
-            <div className="mb-4 flex items-center gap-2 text-sm">
-              <Star size={16} className="fill-gold-400 text-gold-400" />
-              <span className="font-bold text-warm-700">{cafe.rating}</span>
-              <span className="text-warm-400">· {cafe.reviewCount} reviews</span>
-            </div>
             <ReviewSection cafeId={String(cafe.id)} canWrite={!isOwnListing} />
           </div>
         )}

@@ -19,14 +19,23 @@ public class AuthDtos {
       Role role
   ) {}
 
+  /**
+   * Access token always present. {@code refreshToken} is included for native/mobile clients;
+   * web continues to use the HttpOnly cookie and may ignore this field.
+   */
   public record AuthResponse(
       String token,
       Long userId,
       String email,
       String displayName,
       String role,
-      boolean emailVerified
-  ) {}
+      boolean emailVerified,
+      String refreshToken
+  ) {
+    public AuthResponse withoutRefresh() {
+      return new AuthResponse(token, userId, email, displayName, role, emailVerified, null);
+    }
+  }
 
   public record MessageResponse(String message) {}
 
@@ -46,5 +55,7 @@ public class AuthDtos {
 
   public record DeleteAccountRequest(@NotBlank String password) {}
 
-  public record RefreshResponse(String token, boolean emailVerified) {}
+  public record RefreshRequest(String refreshToken) {}
+
+  public record RefreshResponse(String token, boolean emailVerified, String refreshToken) {}
 }

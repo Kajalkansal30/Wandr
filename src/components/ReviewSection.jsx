@@ -62,7 +62,7 @@ function ReviewCard({ review }) {
   );
 }
 
-export default function ReviewSection({ cafeId, canWrite = true }) {
+export default function ReviewSection({ cafeId, canWrite = true, fallbackRating = 0, fallbackCount = 0 }) {
   const { user } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +81,7 @@ export default function ReviewSection({ cafeId, canWrite = true }) {
   }
 
   useEffect(() => {
+    setLoading(true);
     load();
   }, [cafeId]);
 
@@ -109,8 +110,29 @@ export default function ReviewSection({ cafeId, canWrite = true }) {
     );
   }
 
+  // Prefer live list aggregates so seed/mock place.reviewCount can't disagree with an empty list
+  const displayCount = reviews.length;
+  const displayRating =
+    displayCount > 0
+      ? (reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / displayCount).toFixed(1)
+      : null;
+
   return (
     <div className="space-y-4">
+      <div className="mb-1 flex items-center gap-2 text-sm">
+        <Star size={16} className="fill-gold-400 text-gold-400" />
+        {displayCount > 0 ? (
+          <>
+            <span className="font-bold text-warm-700">{displayRating}</span>
+            <span className="text-warm-400">
+              · {displayCount} review{displayCount === 1 ? "" : "s"}
+            </span>
+          </>
+        ) : (
+          <span className="text-warm-400">No reviews yet</span>
+        )}
+      </div>
+
       {showForm ? (
         <form onSubmit={handleSubmit} className="rounded-xl border border-warm-100 bg-white p-4">
           <p className="mb-2 text-sm font-semibold text-warm-700">Your review</p>
