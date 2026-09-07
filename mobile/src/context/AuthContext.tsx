@@ -49,14 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const token = await getAccessToken();
+        if (cancelled) return;
         if (!token) {
           await persistUser(null);
           return;
         }
         const cached = await AsyncStorage.getItem(USER_KEY);
+        if (cancelled) return;
         const fromJwt = decodeUserFromJwt(token);
         if (cached) {
           try {
@@ -79,10 +82,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await clearTokens();
           await persistUser(null);
         }
+      } catch {
+        /* treat as logged out */
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const applySession = useCallback(async (session: authApi.AuthSession) => {

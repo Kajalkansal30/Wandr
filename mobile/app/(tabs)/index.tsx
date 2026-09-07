@@ -51,17 +51,27 @@ export default function HomeScreen() {
   );
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === "granted") {
-          const loc = await Location.getCurrentPositionAsync({});
+        if (status !== "granted" || cancelled) return;
+        const loc = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+        ]);
+        if (!cancelled && loc && "coords" in loc) {
           setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
         }
       } catch {
-        /* optional */
+        /* optional — places still load without GPS */
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
