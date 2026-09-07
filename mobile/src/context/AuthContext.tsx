@@ -24,9 +24,30 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Hermes has no atob — decode JWT payload with a small base64url helper. */
+function base64UrlToJson(segment: string): any {
+  const b64 = segment.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+  const input = b64 + pad;
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let str = "";
+  for (let i = 0; i < input.length; i += 4) {
+    const a = chars.indexOf(input[i]);
+    const b = chars.indexOf(input[i + 1]);
+    const c = chars.indexOf(input[i + 2]);
+    const d = chars.indexOf(input[i + 3]);
+    const n = (a << 18) | (b << 12) | ((c & 63) << 6) | (d & 63);
+    str += String.fromCharCode((n >> 16) & 255);
+    if (input[i + 2] !== "=") str += String.fromCharCode((n >> 8) & 255);
+    if (input[i + 3] !== "=") str += String.fromCharCode(n & 255);
+  }
+  // JWT payloads are typically ASCII JSON
+  return JSON.parse(str);
+}
+
 function decodeUserFromJwt(token: string): Partial<User> | null {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const payload = base64UrlToJson(token.split(".")[1]);
     return {
       userId: Number(payload.sub),
       email: payload.email || "",
