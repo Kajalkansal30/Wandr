@@ -243,7 +243,7 @@ export default function DashboardPage() {
                           <StatusIcon size={11} /> {cfg.label}
                         </span>
                         {cafe.ownershipStatus === "OWNER_VERIFIED" && (
-                          <span className="text-[11px] font-medium text-sage-500">✓ Owner verified</span>
+                          <span className="text-[11px] font-medium text-sage-500">✓ Verified business</span>
                         )}
                         {cafe.ownershipStatus === "OWNER_CLAIMED" && !isPending && (
                           <span className="text-[11px] font-medium text-warm-400">Claimed · verify to unlock trust</span>
@@ -313,24 +313,37 @@ export default function DashboardPage() {
                     {trust.ownershipStatus}
                   </p>
                   {trust.ownershipStatus !== "OWNER_VERIFIED" && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await api(`/api/owner/places/${trustPlaceId || approved[0].id}/request-verification`, {
-                            method: "POST",
-                            auth: true,
-                            body: { evidence: "Please verify my business", verificationRequest: true },
-                          });
-                          alert("Verification request submitted to admin.");
-                        } catch (err) {
-                          alert(err.message || "Failed");
-                        }
-                      }}
-                      className="w-full rounded-xl bg-warm-700 py-3 text-sm font-semibold text-white"
-                    >
-                      Complete verification
-                    </button>
+                    <div className="space-y-2">
+                      <p className="text-sm text-warm-500">Finish verification evidence on the place page:</p>
+                      <Link
+                        to={`/cafe/${trustPlaceId || approved[0].id}`}
+                        className="inline-block w-full rounded-xl bg-warm-700 py-3 text-center text-sm font-semibold text-white"
+                      >
+                        Open listing · complete verification
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await api(`/api/owner/places/${trustPlaceId || approved[0].id}/request-verification`, {
+                              method: "POST",
+                              auth: true,
+                              body: { evidence: "Please verify my business", verificationRequest: true },
+                            });
+                            alert("Verification claim opened. Continue methods on the listing page.");
+                            navigate(`/cafe/${trustPlaceId || approved[0].id}`);
+                          } catch (err) {
+                            alert(err.message || "Failed");
+                          }
+                        }}
+                        className="w-full rounded-xl border border-warm-200 bg-white py-3 text-sm font-semibold text-warm-700"
+                      >
+                        Start verification claim
+                      </button>
+                    </div>
+                  )}
+                  {trust.ownershipStatus === "OWNER_VERIFIED" && (
+                    <p className="text-sm font-semibold text-sage-500">✓ You are verified as an authorized manager</p>
                   )}
                 </div>
               )}

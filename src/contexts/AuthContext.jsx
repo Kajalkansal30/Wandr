@@ -68,6 +68,15 @@ export function AuthProvider({ children }) {
     window.location.href = "/";
   }
 
+  function markEmailVerified() {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, emailVerified: true };
+      saveSession(next, role || "user");
+      return next;
+    });
+  }
+
   const value = {
     user,
     role,
@@ -75,6 +84,7 @@ export function AuthProvider({ children }) {
     signup,
     login,
     signOut,
+    markEmailVerified,
     isDemoMode: import.meta.env.DEV,
     emailVerified: Boolean(user?.emailVerified),
   };

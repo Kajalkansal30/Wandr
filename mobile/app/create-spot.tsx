@@ -18,6 +18,8 @@ import { takePendingSpotMedia } from "../src/state/pendingSpotMedia";
 import { colors } from "../src/theme";
 
 const SPOT_KINDS = ["AMBIENCE", "FOOD", "NEW_CAFE", "HIDDEN_GEM", "OFFER", "EVENT"];
+const MAX_DURATION_SEC = 30;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 export default function CreateSpotScreen() {
   const { user } = useAuth();
@@ -33,12 +35,17 @@ export default function CreateSpotScreen() {
   const [mime, setMime] = useState("video/mp4");
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "uploading" | "publishing">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [doneMsg, setDoneMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const pending = takePendingSpotMedia();
     if (!pending) return;
+    if (pending.durationSec != null && pending.durationSec > MAX_DURATION_SEC) {
+      setError(`Video must be ${MAX_DURATION_SEC} seconds or less`);
+      return;
+    }
     setLocalUri(pending.uri);
     setMime(pending.mime || "video/mp4");
     if (pending.durationSec != null && pending.durationSec > 0) {
@@ -72,6 +79,7 @@ export default function CreateSpotScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.hint}>Record or pick a video (max {MAX_DURATION_SEC}s). Photos are not supported.</Text>
       <Pressable style={styles.cameraLink} onPress={() => router.push("/record-spot")}>
         <Text style={styles.cameraLinkText}>Open camera (front / back)</Text>
       </Pressable>
@@ -146,29 +154,38 @@ export default function CreateSpotScreen() {
       <Pressable
         style={styles.secondary}
         onPress={async () => {
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) {
-            setError("Photo library permission required");
-            return;
-          }
+          setError(null);
           const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ["videos", "images"],
+            mediaTypes: ["videos"],
             quality: 0.85,
+            videoMaxDuration: MAX_DURATION_SEC,
           });
           if (result.canceled || !result.assets?.[0]) return;
           const asset = result.assets[0];
+          const secs =
+            asset.duration != null
+              ? Math.round(asset.duration > 1000 ? asset.duration / 1000 : asset.duration)
+              : null;
+          if (secs != null && secs > MAX_DURATION_SEC) {
+            setError(`Video must be ${MAX_DURATION_SEC} seconds or less`);
+            return;
+          }
+          if (asset.fileSize != null && asset.fileSize > MAX_VIDEO_BYTES) {
+            setError("Video must be under 50MB");
+            return;
+          }
           setLocalUri(asset.uri);
-          setMime(asset.mimeType || (asset.type === "video" ? "video/mp4" : "image/jpeg"));
-          if (asset.duration != null) setDurationSec(Math.round(asset.duration / 1000));
+          setMime(asset.mimeType || "video/mp4");
+          if (secs != null && secs > 0) setDurationSec(secs);
         }}
       >
         <Text style={styles.secondaryText}>
-          {localUri ? "Media ready — tap to change" : "Pick video / photo from gallery"}
+          {localUri ? "Video ready — tap to change" : "Pick video from gallery"}
         </Text>
       </Pressable>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {done ? <Text style={styles.ok}>Spot submitted.</Text> : null}
+      {doneMsg ? <Text style={styles.ok}>{doneMsg}</Text> : null}
 
       <Pressable
         style={styles.button}
@@ -176,23 +193,25 @@ export default function CreateSpotScreen() {
         onPress={async () => {
           setBusy(true);
           setError(null);
+          setDoneMsg(null);
           try {
             if (!placeId) throw new Error("Choose a place");
+            if (durationSec != null && durationSec > MAX_DURATION_SEC) {
+              throw new Error(`Video must be ${MAX_DURATION_SEC} seconds or less`);
+            }
             let videoUrl = url.trim();
             let thumbnailUrl: string | null = null;
             if (localUri) {
-              const uploaded = await uploadLocalUri(
-                localUri,
-                "spotted",
-                mime.startsWith("image/") ? "image/jpeg" : mime || "video/mp4"
-              );
+              setPhase("uploading");
+              const uploaded = await uploadLocalUri(localUri, "spotted", mime || "video/mp4");
               videoUrl = uploaded.url;
               thumbnailUrl = uploaded.thumbnailUrl;
             }
             if (!videoUrl || !/^https:\/\//i.test(videoUrl)) {
-              throw new Error("Record, add media, or paste an https URL");
+              throw new Error("Record, pick a video, or paste an https URL");
             }
-            await createSpot({
+            setPhase("publishing");
+            const spot = await createSpot({
               placeId,
               url: videoUrl,
               thumbnailUrl,
@@ -200,16 +219,27 @@ export default function CreateSpotScreen() {
               spotKind,
               durationSec: durationSec ?? null,
             });
-            setDone(true);
+            const pending = String(spot?.status || "").toUpperCase() === "PENDING";
+            setDoneMsg(pending ? "Submitted for review." : "Spot is live.");
           } catch (e: any) {
             setError(e?.message || "Could not publish");
           } finally {
+            setPhase("idle");
             setBusy(false);
           }
         }}
       >
-        {busy ? <ActivityIndicator color={colors.cream} /> : <Text style={styles.buttonText}>Publish</Text>}
+        {busy ? (
+          <ActivityIndicator color={colors.cream} />
+        ) : (
+          <Text style={styles.buttonText}>Publish</Text>
+        )}
       </Pressable>
+      {busy ? (
+        <Text style={styles.phase}>
+          {phase === "uploading" ? "Uploading video…" : phase === "publishing" ? "Publishing…" : ""}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -218,6 +248,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream, padding: 16, gap: 10 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.cream, gap: 12 },
   msg: { color: colors.warm600 },
+  hint: { color: colors.warm500, fontSize: 13, marginBottom: 4 },
   cameraLink: {
     backgroundColor: colors.warm700,
     borderRadius: 16,
@@ -265,4 +296,5 @@ const styles = StyleSheet.create({
   secondaryText: { color: colors.accent, fontWeight: "700" },
   error: { color: colors.accent },
   ok: { color: colors.sage, fontWeight: "600" },
+  phase: { textAlign: "center", color: colors.warm500, fontSize: 13 },
 });

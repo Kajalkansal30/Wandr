@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { submitCommunityPlace } from "../api/places";
+import { isVerificationRequiredError } from "../api/auth";
 
 const CATEGORIES = ["Café", "Bakery", "Restaurant", "Street Food", "Food Truck", "Dessert", "Pop-up", "Other"];
 
 export default function SubmitPlacePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, emailVerified } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
@@ -32,6 +33,11 @@ export default function SubmitPlacePage() {
       navigate("/login?next=/submit");
       return;
     }
+    if (emailVerified === false) {
+      alert("Verify your email before submitting a place.");
+      navigate("/verify-email");
+      return;
+    }
     setBusy(true);
     try {
       await submitCommunityPlace({
@@ -46,6 +52,10 @@ export default function SubmitPlacePage() {
       });
       setSubmitted(true);
     } catch (err) {
+      if (isVerificationRequiredError(err)) {
+        navigate("/verify-email");
+        return;
+      }
       alert(err.message || "Failed to submit");
     } finally {
       setBusy(false);
@@ -58,7 +68,7 @@ export default function SubmitPlacePage() {
         <CheckCircle size={40} className="mb-3 text-sage-500" />
         <h2 className="text-xl font-bold text-warm-700">Thanks for adding a place</h2>
         <p className="mt-2 max-w-sm text-sm text-warm-400">
-          It&apos;s a community listing (unclaimed) pending review. The owner can claim it later.
+          It&apos;s a community listing (Community Added · Not claimed) pending review. Submitting does not make you the owner — the authorized manager can claim later.
         </p>
         <button type="button" onClick={() => navigate("/")} className="mt-6 rounded-xl bg-warm-600 px-6 py-3 text-sm font-semibold text-white">
           Back home
@@ -75,7 +85,7 @@ export default function SubmitPlacePage() {
       <h1 className="text-2xl font-bold text-warm-700" style={{ fontFamily: "var(--font-display)" }}>
         Add a place
       </h1>
-      <p className="mt-1 mb-6 text-sm text-warm-400">Community listing — owner can claim later.</p>
+      <p className="mt-1 mb-6 text-sm text-warm-400">Add a place for discovery — claiming ownership is a separate verification step.</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <input required value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Place name" className="w-full rounded-xl border border-warm-200 bg-white px-4 py-3 text-sm" />

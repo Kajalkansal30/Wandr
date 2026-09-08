@@ -24,6 +24,14 @@ export async function toggleSpotLike(id: string | number) {
   return api(`/api/spotted/${id}/like`, { method: "POST", auth: true });
 }
 
+export async function reportSpot(id: string | number, reason: string, note?: string | null) {
+  return api(`/api/spotted/${id}/report`, {
+    method: "POST",
+    auth: true,
+    body: { reason, note: note || null },
+  });
+}
+
 export async function trackEvent(
   eventType: string,
   opts: { placeId?: number | null; source?: string; metadata?: Record<string, unknown> } = {}

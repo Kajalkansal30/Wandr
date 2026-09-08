@@ -62,6 +62,17 @@ export default function OwnerPlacesScreen() {
       <Pressable style={styles.button} onPress={() => router.push("/owner/edit/new")}>
         <Text style={styles.buttonText}>New listing</Text>
       </Pressable>
+      <View style={styles.links}>
+        <Pressable onPress={() => router.push("/owner/analytics")}>
+          <Text style={styles.link}>Analytics</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push("/owner/boosts")}>
+          <Text style={styles.link}>Boosts</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push("/owner/claims")}>
+          <Text style={styles.link}>Claims</Text>
+        </Pressable>
+      </View>
       <FlatList
         data={places}
         keyExtractor={(item) => String(item.id)}
@@ -88,6 +99,7 @@ const styles = StyleSheet.create({
   msg: { color: colors.warm600, textAlign: "center", paddingHorizontal: 24 },
   button: { backgroundColor: colors.warm700, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, alignSelf: "flex-start", marginBottom: 12 },
   buttonText: { color: colors.cream, fontWeight: "700" },
+  links: { flexDirection: "row", gap: 16, marginBottom: 12 },
   card: {
     backgroundColor: colors.white,
     borderRadius: 12,

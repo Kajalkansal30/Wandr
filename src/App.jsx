@@ -12,6 +12,7 @@ const SignupPage = lazy(() => import("./pages/SignupPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
+const ClaimVerifyPage = lazy(() => import("./pages/ClaimVerifyPage"));
 const CafeDetailPage = lazy(() => import("./pages/CafeDetailPage"));
 const SavedPage = lazy(() => import("./pages/SavedPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -75,6 +76,7 @@ export default function App() {
                   <Route path="forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="reset-password" element={<ResetPasswordPage />} />
                   <Route path="verify-email" element={<VerifyEmailPage />} />
+                  <Route path="claim-verify" element={<ClaimVerifyPage />} />
                   <Route path="cafe/:id" element={<CafeDetailPage />} />
                   <Route path="lists" element={<CuratedListsIndex />} />
                   <Route path="lists/:listId" element={<CuratedListPage />} />

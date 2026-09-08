@@ -39,6 +39,8 @@ wandr:
   email:
     from: ${WANDR_EMAIL_FROM:Wandr <onboarding@resend.dev>}
     resend-api-key: ${RESEND_API_KEY:}
+  sms:
+    provider: ${WANDR_SMS_PROVIDER:log}
 
 logging:
   level:

@@ -35,4 +35,8 @@ public class NotificationDtos {
   }
 
   public record UnreadCountResponse(long unread) {}
+
+  public record RegisterPushTokenRequest(String token, String platform) {}
+
+  public record PushTokenResponse(String status) {}
 }

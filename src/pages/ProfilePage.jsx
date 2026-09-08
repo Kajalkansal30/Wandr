@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { loadSavedIds } from "../utils/favorites";
 import { computeBadges } from "../utils/badges";
-import { changePasswordRequest, deleteAccountRequest } from "../api/auth";
+import { changePasswordRequest, deleteAccountRequest, resendVerificationRequest } from "../api/auth";
 import { setToken } from "../api/client";
 
 const BADGE_ICONS = {
@@ -36,7 +36,7 @@ const SESSION_KEY = "wandr_session";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user, role, signOut } = useAuth();
+  const { user, role, signOut, emailVerified } = useAuth();
   const { places } = usePlaces();
   const [savedIds, setSavedIds] = useState([]);
   const [oldPassword, setOldPassword] = useState("");
@@ -47,6 +47,8 @@ export default function ProfilePage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteErr, setDeleteErr] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
 
   useEffect(() => {
     if (!user) {
@@ -141,6 +143,41 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {!emailVerified && (
+        <div className="mb-6 rounded-xl border border-warm-200 bg-[#FFF4EC] p-4 text-left">
+          <p className="text-sm text-warm-700">
+            Email not verified. Verify to post reviews, Spotted, and claims. Links expire in 24 hours.
+          </p>
+          <button
+            type="button"
+            disabled={resendBusy}
+            onClick={async () => {
+              setResendBusy(true);
+              setResendMsg("");
+              try {
+                const res = await resendVerificationRequest();
+                setResendMsg(res.message || "Verification email sent");
+              } catch (err) {
+                setResendMsg(err.message || "Could not resend");
+              } finally {
+                setResendBusy(false);
+              }
+            }}
+            className="mt-2 text-sm font-semibold text-terracotta-500 underline disabled:opacity-60"
+          >
+            {resendBusy ? "Sending…" : "Resend verification email"}
+          </button>
+          {resendMsg ? <p className="mt-1 text-xs text-warm-500">{resendMsg}</p> : null}
+          <button
+            type="button"
+            onClick={() => navigate("/verify-email")}
+            className="mt-2 ml-3 text-sm font-semibold text-warm-600 underline"
+          >
+            Open verify page
+          </button>
+        </div>
+      )}
 
       <div className="mb-8 grid grid-cols-3 gap-3">
         {stats.map((s) => {

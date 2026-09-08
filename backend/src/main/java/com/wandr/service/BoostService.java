@@ -2,6 +2,7 @@ package com.wandr.service;
 
 import com.wandr.domain.BoostCampaign;
 import com.wandr.domain.BoostStatus;
+import com.wandr.domain.OwnershipStatus;
 import com.wandr.domain.Place;
 import com.wandr.domain.PlaceStatus;
 import com.wandr.domain.User;
@@ -56,6 +57,14 @@ public class BoostService {
     }
     if (place.getStatus() != PlaceStatus.APPROVED) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only live (approved) listings can be boosted");
+    }
+    if (Boolean.TRUE.equals(place.getNeedsReverification())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Re-verify the listing before boosting (name/address/phone/website changed)");
+    }
+    if (place.getOwnershipStatus() != OwnershipStatus.OWNER_VERIFIED
+        && place.getOwnershipStatus() != OwnershipStatus.OWNER_CLAIMED) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Claim and verify the listing before boosting");
     }
 
     int budget = req.budgetInr() != null ? req.budgetInr() : 1000;

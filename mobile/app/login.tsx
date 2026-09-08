@@ -7,13 +7,14 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "../src/context/AuthContext";
 import { colors } from "../src/theme";
 
 export default function LoginScreen() {
   const { login } = useAuth();
   const router = useRouter();
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +25,8 @@ export default function LoginScreen() {
     setError(null);
     try {
       await login(email.trim(), password);
-      router.replace("/(tabs)/profile");
+      const dest = typeof next === "string" && next.startsWith("/") ? next : "/(tabs)/profile";
+      router.replace(dest as any);
     } catch (e: any) {
       setError(e?.message || "Login failed");
     } finally {
@@ -60,6 +62,9 @@ export default function LoginScreen() {
       </Pressable>
       <Pressable onPress={() => router.push("/forgot")}>
         <Text style={styles.link}>Forgot password</Text>
+      </Pressable>
+      <Pressable onPress={() => router.push("/reset-password" as any)}>
+        <Text style={styles.link}>Have a reset token?</Text>
       </Pressable>
       <Pressable onPress={() => router.push("/verify")}>
         <Text style={styles.link}>Verify email</Text>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Shield, Clock, CheckCircle, XCircle, Eye, Users, Store, Flag, ArrowLeft,
-  ScrollText, Image, UserCheck, Ban,
+  ScrollText, Image, UserCheck, Activity,
 } from "lucide-react";
 import {
   fetchAdminPlaces,
@@ -10,8 +10,10 @@ import {
   fetchAuditLog,
   fetchAdminClaims,
   fetchPendingMedia,
+  fetchAdminActivity,
   approveClaim,
   rejectClaim,
+  requestClaimInfo,
   approveMedia,
   rejectMedia,
 } from "../../api/admin";
@@ -24,6 +26,8 @@ export default function AdminPage() {
   const [claims, setClaims] = useState([]);
   const [media, setMedia] = useState([]);
   const [audit, setAudit] = useState([]);
+  const [activity, setActivity] = useState(null);
+  const [activityDays, setActivityDays] = useState(7);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -42,6 +46,8 @@ export default function AdminPage() {
           setMedia(await fetchPendingMedia());
         } else if (view === "audit") {
           setAudit(await fetchAuditLog());
+        } else if (view === "activity") {
+          setActivity(await fetchAdminActivity(activityDays));
         }
       } catch (err) {
         console.error(err);
@@ -49,7 +55,7 @@ export default function AdminPage() {
       setLoading(false);
     }
     load();
-  }, [view, statusTab]);
+  }, [view, statusTab, activityDays]);
 
   return (
     <div className="page-shell page-with-nav pt-6 md:pt-8">
@@ -63,7 +69,7 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-warm-700" style={{ fontFamily: "var(--font-display)" }}>
             Command Center
           </h1>
-          <p className="text-sm text-warm-400">Moderation · claims · audit</p>
+          <p className="text-sm text-warm-400">Moderation · claims · activity · audit</p>
         </div>
       </div>
 
@@ -89,6 +95,7 @@ export default function AdminPage() {
           { id: "listings", label: "Listings", icon: Store },
           { id: "claims", label: "Claims", icon: UserCheck },
           { id: "media", label: "Media", icon: Image },
+          { id: "activity", label: "Activity", icon: Activity },
           { id: "audit", label: "Audit", icon: ScrollText },
         ].map((t) => {
           const Icon = t.icon;
@@ -125,6 +132,23 @@ export default function AdminPage() {
               }`}
             >
               {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {view === "activity" && (
+        <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl bg-warm-50 p-1">
+          {[7, 14, 30].map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setActivityDays(d)}
+              className={`flex-1 rounded-lg py-2 text-xs font-medium ${
+                activityDays === d ? "bg-white text-warm-700 shadow-sm" : "text-warm-400"
+              }`}
+            >
+              Last {d}d
             </button>
           ))}
         </div>
@@ -169,11 +193,39 @@ export default function AdminPage() {
               <div key={c.id} className="rounded-xl border border-warm-100 bg-white p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-bold text-warm-700">{c.placeName}</h3>
+                    <h3 className="font-bold text-warm-700">
+                      <Link to={`/cafe/${c.placeId}`} className="hover:underline">
+                        {c.placeName}
+                      </Link>
+                    </h3>
                     <p className="text-xs text-warm-400">
-                      {c.verificationRequest ? "Verification request" : "Ownership claim"} · {c.phone || "no phone"}
+                      {c.claimKind || (c.verificationRequest ? "VERIFICATION_UPGRADE" : "CLAIM")}
+                      {c.requestedRole ? ` · ${c.requestedRole}` : ""}
+                      {" · "}
+                      {c.status}
+                      {c.decision ? ` · ${c.decision}` : ""}
+                      {c.riskScore != null ? ` · risk ${c.riskScore}` : ""}
                     </p>
-                    {c.evidence && <p className="mt-2 text-sm text-warm-500">{c.evidence}</p>}
+                    {c.riskReasons ? <p className="mt-1 text-[11px] text-warm-400">Risk: {c.riskReasons}</p> : null}
+                    {c.verificationMethod ? (
+                      <p className="mt-1 text-xs text-warm-500">Method: {c.verificationMethod} ({c.verificationLevel || "—"})</p>
+                    ) : null}
+                    {c.phone ? <p className="mt-1 text-xs text-warm-400">Phone note: {c.phone}</p> : null}
+                    {c.evidence && <p className="mt-2 text-sm text-warm-500 whitespace-pre-wrap">{c.evidence}</p>}
+                    {c.needsInfoReasons ? <p className="mt-1 text-xs text-gold-500">Need info: {c.needsInfoReasons}</p> : null}
+                    {(c.evidenceItems || []).map((e) => (
+                      <p key={e.id} className="mt-1 text-xs text-warm-500">
+                        Evidence {e.method}: {e.status}
+                        {e.mediaUrl ? (
+                          <>
+                            {" · "}
+                            <a href={e.mediaUrl} target="_blank" rel="noreferrer" className="text-accent underline">
+                              media
+                            </a>
+                          </>
+                        ) : null}
+                      </p>
+                    ))}
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -196,6 +248,18 @@ export default function AdminPage() {
                     className="rounded-lg bg-terracotta-50 px-3 py-1.5 text-xs font-semibold text-terracotta-500"
                   >
                     <XCircle size={12} className="mr-1 inline" /> Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const note = window.prompt("What info do you need?");
+                      if (!note) return;
+                      await requestClaimInfo(c.id, { note, reasons: ["MORE_EVIDENCE"] });
+                      setClaims((prev) => prev.map((x) => (x.id === c.id ? { ...x, status: "NEED_INFO", needsInfoReasons: "MORE_EVIDENCE" } : x)));
+                    }}
+                    className="rounded-lg border border-warm-200 bg-white px-3 py-1.5 text-xs font-semibold text-warm-600"
+                  >
+                    Request info
                   </button>
                 </div>
               </div>
@@ -249,6 +313,107 @@ export default function AdminPage() {
               </div>
               );
             })}
+          </div>
+        )
+      ) : view === "activity" ? (
+        !activity ? (
+          <p className="py-12 text-center text-sm text-warm-400">Could not load activity.</p>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                ["Logins", activity.totals?.logins],
+                ["Signups", activity.totals?.signups],
+                ["DAU (24h)", activity.totals?.dau],
+                ["New users", activity.totals?.newUsers],
+                ["Unverified", activity.totals?.unverifiedUsers],
+                ["Place views", activity.totals?.placeViews],
+                ["Claim starts", activity.totals?.claimStarts],
+                ["All users", activity.totals?.users],
+              ].map(([label, val]) => (
+                <div key={label} className="rounded-xl border border-warm-100 bg-white p-3">
+                  <p className="text-lg font-bold text-warm-700">{val ?? 0}</p>
+                  <p className="text-[10px] text-warm-400">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            {(activity.byType || []).length > 0 && (
+              <div>
+                <h2 className="mb-2 text-sm font-bold text-warm-700">Events by type ({activity.days}d)</h2>
+                <div className="space-y-1 rounded-xl border border-warm-100 bg-white p-3">
+                  {activity.byType.slice(0, 12).map((row) => (
+                    <div key={row.eventType} className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-warm-600">{row.eventType}</span>
+                      <span className="text-warm-400">{row.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h2 className="mb-2 text-sm font-bold text-warm-700">Recent logins &amp; signups</h2>
+              {(activity.recentAuth || []).length === 0 ? (
+                <p className="text-xs text-warm-400">No login/signup events yet — appear after users sign in.</p>
+              ) : (
+                <div className="space-y-2">
+                  {activity.recentAuth.map((row) => (
+                    <div key={row.id} className="rounded-xl border border-warm-100 bg-white px-4 py-3 text-sm">
+                      <p className="font-semibold text-warm-700">
+                        {row.eventType === "signup" ? "Signup" : "Login"}
+                        {row.displayName ? ` · ${row.displayName}` : ""}
+                      </p>
+                      <p className="text-xs text-warm-400">
+                        {row.email || `user #${row.userId || "?"}`}
+                        {row.source ? ` · ${row.source}` : ""}
+                      </p>
+                      <p className="mt-1 text-[11px] text-warm-300">
+                        {row.createdAt ? new Date(row.createdAt).toLocaleString() : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h2 className="mb-2 text-sm font-bold text-warm-700">Newest accounts</h2>
+              <div className="space-y-2">
+                {(activity.recentUsers || []).map((u) => (
+                  <div key={u.id} className="rounded-xl border border-warm-100 bg-white px-4 py-3 text-sm">
+                    <p className="font-semibold text-warm-700">{u.displayName || u.email}</p>
+                    <p className="text-xs text-warm-400">
+                      {u.email} · {u.role}
+                      {u.emailVerified ? " · verified" : " · unverified"}
+                    </p>
+                    <p className="mt-1 text-[11px] text-warm-300">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleString() : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="mb-2 text-sm font-bold text-warm-700">Latest product events</h2>
+              {(activity.recentEvents || []).length === 0 ? (
+                <p className="text-xs text-warm-400">No events yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {activity.recentEvents.slice(0, 25).map((row) => (
+                    <div key={`ev-${row.id}`} className="rounded-xl border border-warm-100 bg-white px-4 py-2.5 text-sm">
+                      <p className="font-medium text-warm-700">{row.eventType}</p>
+                      <p className="text-[11px] text-warm-400">
+                        {row.email || (row.userId ? `user #${row.userId}` : "anonymous")}
+                        {row.source ? ` · ${row.source}` : ""}
+                        {row.createdAt ? ` · ${new Date(row.createdAt).toLocaleString()}` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )
       ) : (

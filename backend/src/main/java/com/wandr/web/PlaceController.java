@@ -67,6 +67,93 @@ public class PlaceController {
     return claimService.create(user, id, body);
   }
 
+  @GetMapping("/api/places/{id}/claim-methods")
+  public ClaimDtos.AvailableMethodsResponse claimMethods(@PathVariable Long id) {
+    return claimService.availableMethods(id);
+  }
+
+  @GetMapping("/api/places/{id}/my-claim")
+  public ResponseEntity<ClaimDtos.ClaimResponse> myClaim(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long id
+  ) {
+    if (user == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    ClaimDtos.ClaimResponse res = claimService.findMinePending(user, id);
+    if (res == null) return ResponseEntity.noContent().build();
+    return ResponseEntity.ok(res);
+  }
+
+  @PostMapping("/api/places/claims/{claimId}/phone/start")
+  public ClaimDtos.ClaimResponse startPhoneOtp(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long claimId
+  ) {
+    return claimService.startPhoneOtp(user, claimId);
+  }
+
+  @PostMapping("/api/places/claims/{claimId}/phone/verify")
+  public ClaimDtos.ClaimResponse verifyPhoneOtp(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long claimId,
+      @RequestBody ClaimDtos.VerifyOtpRequest body
+  ) {
+    return claimService.verifyPhoneOtp(user, claimId, body == null ? null : body.code());
+  }
+
+  @PostMapping("/api/places/claims/{claimId}/email/start")
+  public ClaimDtos.ClaimResponse startBusinessEmail(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long claimId,
+      @RequestBody ClaimDtos.StartBusinessEmailRequest body
+  ) {
+    return claimService.startBusinessEmail(user, claimId, body == null ? null : body.email());
+  }
+
+  @PostMapping("/api/places/claims/{claimId}/email/verify")
+  public ClaimDtos.ClaimResponse verifyBusinessEmail(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long claimId,
+      @RequestBody ClaimDtos.VerifyBusinessEmailRequest body
+  ) {
+    return claimService.verifyBusinessEmail(user, claimId, body == null ? null : body.token());
+  }
+
+  @PostMapping("/api/places/claims/{claimId}/domain/start")
+  public ClaimDtos.ClaimResponse startDomain(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long claimId
+  ) {
+    return claimService.startDomain(user, claimId);
+  }
+
+  @PostMapping("/api/places/claims/{claimId}/domain/check")
+  public ClaimDtos.ClaimResponse checkDomain(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long claimId
+  ) {
+    return claimService.checkDomain(user, claimId);
+  }
+
+  @PostMapping("/api/places/claims/{claimId}/video")
+  public ClaimDtos.ClaimResponse submitVideo(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long claimId,
+      @RequestBody ClaimDtos.SubmitMediaEvidenceRequest body
+  ) {
+    return claimService.submitVideo(user, claimId, body == null ? null : body.url(), body == null ? null : body.note());
+  }
+
+  @PostMapping("/api/places/claims/{claimId}/document")
+  public ClaimDtos.ClaimResponse submitDocument(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long claimId,
+      @RequestBody ClaimDtos.SubmitMediaEvidenceRequest body
+  ) {
+    return claimService.submitDocument(user, claimId, body == null ? null : body.url(), body == null ? null : body.note());
+  }
+
   @PostMapping("/api/places/{id}/confirm")
   public PlaceDtos.PlaceResponse confirm(
       @AuthenticationPrincipal User user,

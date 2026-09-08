@@ -67,7 +67,15 @@ public class OwnerController {
     placeService.requireOwned(user, id);
     ClaimDtos.CreateClaimRequest req = body == null
         ? new ClaimDtos.CreateClaimRequest(null, "Verification request", true)
-        : new ClaimDtos.CreateClaimRequest(body.phone(), body.evidence(), true);
+        : new ClaimDtos.CreateClaimRequest(
+            body.phone(),
+            body.evidence(),
+            true,
+            body.requestedRole(),
+            "VERIFICATION_UPGRADE",
+            body.businessModel(),
+            body.businessSize()
+        );
     return claimService.create(user, id, req);
   }
 

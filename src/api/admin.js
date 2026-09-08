@@ -78,6 +78,10 @@ export async function rejectClaim(id, body = {}) {
   return api(`/api/admin/claims/${id}/reject`, { method: "POST", auth: true, body });
 }
 
+export async function requestClaimInfo(id, body = {}) {
+  return api(`/api/admin/claims/${id}/request-info`, { method: "POST", auth: true, body });
+}
+
 export async function fetchPendingMedia() {
   return api("/api/admin/media", { auth: true });
 }
@@ -88,4 +92,8 @@ export async function approveMedia(id, body = {}) {
 
 export async function rejectMedia(id, body = {}) {
   return api(`/api/admin/media/${id}/reject`, { method: "POST", auth: true, body });
+}
+
+export async function fetchAdminActivity(days = 7) {
+  return api(`/api/admin/activity?days=${encodeURIComponent(days)}`, { auth: true });
 }

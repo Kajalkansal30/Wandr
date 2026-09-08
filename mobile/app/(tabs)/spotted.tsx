@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   AppState,
   Dimensions,
   FlatList,
@@ -14,9 +15,11 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { fetchSpottedFeed, toggleSpotLike } from "../../src/api/spotted";
+import { fetchSpottedFeed, reportSpot, toggleSpotLike } from "../../src/api/spotted";
 import { colors } from "../../src/theme";
 import { useAuth } from "../../src/context/AuthContext";
+
+const REPORT_REASONS = ["SPAM", "INAPPROPRIATE", "MISLEADING", "COPYRIGHT", "OTHER"];
 
 const { height: SCREEN_H } = Dimensions.get("window");
 
@@ -40,6 +43,7 @@ function SpotReelItem({
   user,
   onLike,
   onPlace,
+  onReport,
 }: {
   item: Spot;
   active: boolean;
@@ -47,6 +51,7 @@ function SpotReelItem({
   user: boolean;
   onLike: (id: number) => void;
   onPlace: (placeId: number) => void;
+  onReport: (id: number) => void;
 }) {
   const isVideo =
     !item.mediaType ||
@@ -112,6 +117,11 @@ function SpotReelItem({
           ) : (
             <Text style={styles.actionText}>♡ {item.likeCount ?? 0}</Text>
           )}
+          {user ? (
+            <Pressable onPress={() => onReport(item.id)}>
+              <Text style={styles.actionText}>Report</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </View>
@@ -178,6 +188,28 @@ export default function SpottedScreen() {
     }
   }
 
+  function handleReport(id: number) {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    Alert.alert(
+      "Report spot",
+      "Why are you reporting this?",
+      REPORT_REASONS.map((reason) => ({
+        text: reason,
+        onPress: async () => {
+          try {
+            await reportSpot(id, reason);
+            Alert.alert("Thanks", "Report submitted.");
+          } catch (e: any) {
+            Alert.alert("Error", e?.message || "Could not report");
+          }
+        },
+      })).concat([{ text: "Cancel", style: "cancel" } as any])
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.centerFill}>
@@ -239,6 +271,7 @@ export default function SpottedScreen() {
               user={Boolean(user)}
               onLike={handleLike}
               onPlace={(placeId) => router.push(`/place/${placeId}`)}
+              onReport={handleReport}
             />
           )}
         />

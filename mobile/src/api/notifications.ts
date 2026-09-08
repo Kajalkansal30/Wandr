@@ -15,3 +15,19 @@ export async function markNotificationRead(id: number) {
 export async function markAllNotificationsRead() {
   return api("/api/notifications/read-all", { method: "POST", auth: true });
 }
+
+export async function registerPushToken(token: string, platform?: string) {
+  return api("/api/notifications/push-token", {
+    method: "POST",
+    auth: true,
+    body: { token, platform: platform || null },
+  });
+}
+
+export async function unregisterPushToken(token: string) {
+  return api("/api/notifications/push-token", {
+    method: "DELETE",
+    auth: true,
+    body: { token },
+  });
+}

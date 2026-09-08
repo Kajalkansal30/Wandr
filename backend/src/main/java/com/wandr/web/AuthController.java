@@ -59,6 +59,12 @@ public class AuthController {
     return authService.verifyEmail(request.token());
   }
 
+  @PostMapping("/resend-verification")
+  public AuthDtos.MessageResponse resendVerification(@AuthenticationPrincipal User user) {
+    requireUser(user);
+    return authService.resendVerification(user);
+  }
+
   @PostMapping("/forgot-password")
   public AuthDtos.MessageResponse forgotPassword(@Valid @RequestBody AuthDtos.ForgotPasswordRequest request) {
     return authService.forgotPassword(request.email());

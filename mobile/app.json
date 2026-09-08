@@ -13,9 +13,9 @@
       "bundleIdentifier": "com.wandrhere.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Wandr uses your location to show nearby places.",
-        "NSCameraUsageDescription": "Wandr uses the camera for Spotted videos and photos.",
+        "NSCameraUsageDescription": "Wandr uses the camera for Spotted videos.",
         "NSMicrophoneUsageDescription": "Wandr records audio with Spotted videos.",
-        "NSPhotoLibraryUsageDescription": "Wandr needs photo access to upload Spotted media."
+        "NSPhotoLibraryUsageDescription": "Wandr needs access to pick Spotted videos from your library."
       }
     },
     "android": {
@@ -30,9 +30,7 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "CAMERA",
-        "RECORD_AUDIO",
-        "READ_MEDIA_IMAGES",
-        "READ_MEDIA_VIDEO"
+        "RECORD_AUDIO"
       ]
     },
     "web": {
@@ -54,6 +52,13 @@
           "cameraPermission": "Allow Wandr to use the camera for Spotted videos.",
           "microphonePermission": "Allow Wandr to record audio with Spotted videos.",
           "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#5C4033"
         }
       ]
     ],

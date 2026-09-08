@@ -2,6 +2,7 @@ package com.wandr.service;
 
 import com.wandr.domain.*;
 import com.wandr.dto.PlaceDtos;
+import com.wandr.repo.BusinessMemberRepository;
 import com.wandr.repo.PlaceGeoRepository;
 import com.wandr.repo.PlaceRepository;
 import com.wandr.security.VerifiedEmailGuard;
@@ -27,6 +28,7 @@ public class PlaceService {
   private final PlaceRepository placeRepository;
   private final PlaceGeoRepository placeGeoRepository;
   private final BoostService boostService;
+  private final BusinessMemberRepository businessMemberRepository;
 
   @Transactional(readOnly = true)
   public PlaceDtos.PlacePageResponse listApproved(
@@ -211,15 +213,26 @@ public class PlaceService {
         .bestFor(join(req.bestFor()))
         .openingDate(req.openingDate())
         .status(PlaceStatus.PENDING_REVIEW)
+        // Managed by creator but not verified — must complete claim evidence for Verified business
         .ownershipStatus(OwnershipStatus.OWNER_CLAIMED)
         .operatingStatus(OperatingStatus.OPEN)
         .claimedAt(java.time.Instant.now())
+        .needsReverification(true)
+        .verificationLevel("PENDING")
         .owner(owner)
         .rating(0.0)
         .reviewCount(0)
         .savedCount(0)
         .build();
-    return PlaceDtos.PlaceResponse.from(placeRepository.save(place), null);
+    Place saved = placeRepository.save(place);
+    businessMemberRepository.findByPlaceIdAndUserId(saved.getId(), owner.getId())
+        .orElseGet(() -> businessMemberRepository.save(BusinessMember.builder()
+            .placeId(saved.getId())
+            .userId(owner.getId())
+            .role(BusinessMemberRole.OWNER)
+            .status(BusinessMemberStatus.ACTIVE)
+            .build()));
+    return PlaceDtos.PlaceResponse.from(saved, null);
   }
 
   @Transactional
@@ -256,21 +269,40 @@ public class PlaceService {
   @Transactional
   public PlaceDtos.PlaceResponse update(User owner, Long id, PlaceDtos.PlaceUpsertRequest req) {
     Place place = requireOwned(owner, id);
-    if (req.name() != null && !req.name().isBlank()) place.setName(req.name().trim());
-    if (req.category() != null) place.setCategory(blankToNull(req.category()));
+    boolean material = false;
+    if (req.name() != null && !req.name().isBlank()) {
+      if (!req.name().trim().equals(place.getName())) material = true;
+      place.setName(req.name().trim());
+    }
+    if (req.category() != null) {
+      if (!java.util.Objects.equals(blankToNull(req.category()), place.getCategory())) material = true;
+      place.setCategory(blankToNull(req.category()));
+    }
     if (req.locationType() != null) place.setLocationType(parseLocationType(req.locationType()));
     if (req.type() != null || req.category() != null || req.locationType() != null) {
       place.setType(resolveType(req.type(), req.category() != null ? req.category() : place.getCategory(), place.getLocationType()));
     }
     if (req.description() != null) place.setDescription(blankToNull(req.description()));
-    if (req.address() != null) place.setAddress(blankToNull(req.address()));
+    if (req.address() != null) {
+      if (!java.util.Objects.equals(blankToNull(req.address()), place.getAddress())) material = true;
+      place.setAddress(blankToNull(req.address()));
+    }
     if (req.city() != null) place.setCity(blankToNull(req.city()));
     if (req.exactAddressPrivate() != null) place.setExactAddressPrivate(blankToNull(req.exactAddressPrivate()));
     if (req.serviceArea() != null) place.setServiceArea(blankToNull(req.serviceArea()));
     if (req.image() != null && !req.image().isBlank()) place.setImageUrl(req.image().trim());
-    if (req.phone() != null) place.setPhone(blankToNull(req.phone()));
+    if (req.phone() != null) {
+      if (!java.util.Objects.equals(blankToNull(req.phone()), place.getPhone())) {
+        material = true;
+        place.setPhoneVerified(false);
+      }
+      place.setPhone(blankToNull(req.phone()));
+    }
     if (req.whatsapp() != null) place.setWhatsapp(blankToNull(req.whatsapp()));
-    if (req.website() != null) place.setWebsite(blankToNull(req.website()));
+    if (req.website() != null) {
+      if (!java.util.Objects.equals(blankToNull(req.website()), place.getWebsite())) material = true;
+      place.setWebsite(blankToNull(req.website()));
+    }
     if (req.instagram() != null) place.setInstagram(blankToNull(req.instagram()));
     if (req.hours() != null) place.setHours(blankToNull(req.hours()));
     if (req.lat() != null) place.setLat(req.lat());
@@ -280,6 +312,11 @@ public class PlaceService {
     if (req.tags() != null) place.setTags(join(req.tags()));
     if (req.bestFor() != null) place.setBestFor(join(req.bestFor()));
     if (req.openingDate() != null) place.setOpeningDate(req.openingDate());
+    if (material && place.getOwnershipStatus() == OwnershipStatus.OWNER_VERIFIED) {
+      place.setNeedsReverification(true);
+      place.setOwnershipStatus(OwnershipStatus.OWNER_CLAIMED);
+      place.setVerificationLevel("REVERIFY");
+    }
     if (place.getStatus() == PlaceStatus.APPROVED || place.getStatus() == PlaceStatus.REJECTED) {
       place.setStatus(PlaceStatus.PENDING_REVIEW);
     }

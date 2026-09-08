@@ -33,3 +33,22 @@ export async function createOwnerBoost(body: Record<string, unknown>) {
 export async function fetchOwnerClaims() {
   return api("/api/owner/claims", { auth: true });
 }
+
+export async function requestOwnerVerification(
+  placeId: string | number,
+  body: { phone?: string | null; evidence?: string | null } = {}
+) {
+  return api(`/api/owner/places/${placeId}/request-verification`, {
+    method: "POST",
+    auth: true,
+    body: {
+      phone: body.phone || null,
+      evidence: body.evidence || "Verification request",
+      verificationRequest: true,
+    },
+  });
+}
+
+export async function fetchOwnerTrust(placeId: string | number) {
+  return api(`/api/owner/places/${placeId}/trust`, { auth: true });
+}

@@ -45,9 +45,17 @@ public class CloudinarySignService {
         folder = "places/" + user.getId();
         resourceType = "image";
       }
+      case "claim-evidence", "claim-video" -> {
+        folder = "claims/" + user.getId();
+        resourceType = "video";
+      }
+      case "claim-document", "claim-doc" -> {
+        folder = "claims/" + user.getId();
+        resourceType = "image";
+      }
       default -> throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST,
-          "purpose must be spotted or place-cover"
+          "purpose must be spotted, place-cover, claim-evidence, or claim-document"
       );
     }
 

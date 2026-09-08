@@ -29,7 +29,7 @@ export default function RecordSpotScreen() {
   const [camPerm, requestCamPerm] = useCameraPermissions();
   const [micPerm, requestMicPerm] = useMicrophonePermissions();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedRef = useRef(0);
+  const startedAtRef = useRef<number>(0);
 
   useEffect(() => {
     return () => {
@@ -45,7 +45,15 @@ export default function RecordSpotScreen() {
   }
 
   function goToCreate(uri: string, mime = "video/mp4", durationSec?: number) {
-    setPendingSpotMedia({ uri, mime, durationSec });
+    const secs =
+      durationSec != null
+        ? Math.max(1, Math.min(MAX_DURATION_SEC, Math.round(durationSec)))
+        : undefined;
+    if (secs != null && secs > MAX_DURATION_SEC) {
+      setError(`Video must be ${MAX_DURATION_SEC} seconds or less`);
+      return;
+    }
+    setPendingSpotMedia({ uri, mime, durationSec: secs });
     router.replace("/create-spot");
   }
 
@@ -54,26 +62,29 @@ export default function RecordSpotScreen() {
     setError(null);
     setBusy(true);
     setRecording(true);
-    elapsedRef.current = 0;
+    startedAtRef.current = Date.now();
     setElapsed(0);
     clearTimer();
     timerRef.current = setInterval(() => {
-      elapsedRef.current = Math.min(MAX_DURATION_SEC, elapsedRef.current + 1);
-      setElapsed(elapsedRef.current);
-    }, 1000);
+      const secs = Math.min(
+        MAX_DURATION_SEC,
+        Math.floor((Date.now() - startedAtRef.current) / 1000)
+      );
+      setElapsed(secs);
+    }, 250);
     try {
       const video = await cameraRef.current.recordAsync({
         maxDuration: MAX_DURATION_SEC,
       });
       clearTimer();
+      const actualSec = Math.max(
+        1,
+        Math.min(MAX_DURATION_SEC, Math.round((Date.now() - startedAtRef.current) / 1000))
+      );
       setRecording(false);
       setBusy(false);
       if (video?.uri) {
-        goToCreate(
-          video.uri,
-          "video/mp4",
-          Math.max(1, Math.min(MAX_DURATION_SEC, elapsedRef.current || MAX_DURATION_SEC))
-        );
+        goToCreate(video.uri, "video/mp4", actualSec);
       }
     } catch (e: any) {
       clearTimer();
@@ -90,11 +101,7 @@ export default function RecordSpotScreen() {
 
   async function pickFromGallery() {
     if (recording || busy) return;
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      setError("Photo library permission required");
-      return;
-    }
+    setError(null);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["videos"],
       quality: 0.85,
@@ -102,7 +109,14 @@ export default function RecordSpotScreen() {
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    const secs = asset.duration != null ? Math.round(asset.duration / 1000) : undefined;
+    const secs =
+      asset.duration != null
+        ? Math.round(asset.duration > 1000 ? asset.duration / 1000 : asset.duration)
+        : undefined;
+    if (secs != null && secs > MAX_DURATION_SEC) {
+      setError(`Video must be ${MAX_DURATION_SEC} seconds or less`);
+      return;
+    }
     goToCreate(asset.uri, asset.mimeType || "video/mp4", secs);
   }
 

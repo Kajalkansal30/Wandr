@@ -120,6 +120,11 @@ public class SpottedService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spotKind is required");
     }
 
+    Integer durationSec = req.durationSec();
+    if (durationSec != null && (durationSec < 1 || durationSec > 30)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "durationSec must be between 1 and 30");
+    }
+
     boolean ownerUpload = place.getOwner() != null && place.getOwner().getId().equals(user.getId());
 
     PlaceMedia media = placeMediaRepository.save(PlaceMedia.builder()
@@ -130,7 +135,7 @@ public class SpottedService {
         .mediaType(MediaType.VIDEO)
         .spotKind(kind)
         .caption(blankToNull(req.caption()))
-        .durationSec(req.durationSec())
+        .durationSec(durationSec)
         .likeCount(0)
         .source(ownerUpload ? MediaSource.OWNER : MediaSource.COMMUNITY)
         .status(ownerUpload || user.getRole() == Role.ADMIN ? MediaStatus.APPROVED : MediaStatus.PENDING)

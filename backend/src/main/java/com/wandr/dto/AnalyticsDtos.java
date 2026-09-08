@@ -34,4 +34,36 @@ public class AnalyticsDtos {
       List<DailyPoint> daily,
       List<PlaceBreakdown> places
   ) {}
+
+  public record CountByType(String eventType, long count) {}
+
+  public record ActivityRow(
+      Long id,
+      String eventType,
+      Long userId,
+      String email,
+      String displayName,
+      String source,
+      String device,
+      String createdAt
+  ) {}
+
+  public record UserRow(
+      Long id,
+      String email,
+      String displayName,
+      String role,
+      boolean emailVerified,
+      String createdAt
+  ) {}
+
+  public record AdminActivityResponse(
+      int days,
+      Map<String, Long> totals,
+      List<CountByType> byType,
+      List<ActivityRow> recentAuth,
+      List<ActivityRow> recentEvents,
+      List<UserRow> recentUsers,
+      List<DailyPoint> daily
+  ) {}
 }

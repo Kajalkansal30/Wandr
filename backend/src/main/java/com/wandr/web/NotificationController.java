@@ -49,6 +49,25 @@ public class NotificationController {
     return new AuthDtos.MessageResponse("Marked " + marked + " as read");
   }
 
+  @PostMapping("/push-token")
+  public NotificationDtos.PushTokenResponse registerPushToken(
+      @AuthenticationPrincipal User user,
+      @RequestBody NotificationDtos.RegisterPushTokenRequest body
+  ) {
+    requireUser(user);
+    return notificationService.registerPushToken(user.getId(), body == null ? null : body.token(), body == null ? null : body.platform());
+  }
+
+  @DeleteMapping("/push-token")
+  public AuthDtos.MessageResponse unregisterPushToken(
+      @AuthenticationPrincipal User user,
+      @RequestBody NotificationDtos.RegisterPushTokenRequest body
+  ) {
+    requireUser(user);
+    notificationService.unregisterPushToken(user.getId(), body == null ? null : body.token());
+    return new AuthDtos.MessageResponse("unregistered");
+  }
+
   private static void requireUser(User user) {
     if (user == null) {
       throw new org.springframework.web.server.ResponseStatusException(

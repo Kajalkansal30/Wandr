@@ -116,3 +116,17 @@ export async function uploadPlaceCover(file, options = {}) {
   }
   return signedCloudinaryUpload(file, "place-cover", options);
 }
+
+/** Claim verification video evidence */
+export async function uploadClaimVideo(file, options = {}) {
+  if (file.size > MAX_VIDEO_BYTES) throw new Error("Video must be under 50MB");
+  const type = file.type || "";
+  if (type && !type.startsWith("video/")) throw new Error("Please choose a video file");
+  return signedCloudinaryUpload(file, "claim-evidence", options);
+}
+
+/** Claim verification document (image/PDF treated as image upload) */
+export async function uploadClaimDocument(file, options = {}) {
+  if (file.size > MAX_IMAGE_BYTES) throw new Error("Document must be under 10MB");
+  return signedCloudinaryUpload(file, "claim-document", options);
+}

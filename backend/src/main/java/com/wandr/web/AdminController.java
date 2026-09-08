@@ -20,6 +20,7 @@ public class AdminController {
   private final ModerationService moderationService;
   private final ClaimService claimService;
   private final MediaService mediaService;
+  private final AnalyticsService analyticsService;
   private final com.wandr.repo.UserRepository userRepository;
 
   @GetMapping("/places")
@@ -45,6 +46,13 @@ public class AdminController {
     Map<String, Long> m = moderationService.stats();
     m.put("users", userRepository.count());
     return m;
+  }
+
+  @GetMapping("/activity")
+  public AnalyticsDtos.AdminActivityResponse activity(
+      @RequestParam(defaultValue = "7") int days
+  ) {
+    return analyticsService.adminActivity(days);
   }
 
   @GetMapping("/audit")

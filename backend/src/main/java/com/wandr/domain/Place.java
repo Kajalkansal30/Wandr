@@ -118,6 +118,21 @@ public class Place {
 
   private Integer communityConfirmCount;
 
+  @Enumerated(EnumType.STRING)
+  private BusinessModel businessModel;
+
+  @Enumerated(EnumType.STRING)
+  private BusinessSize businessSize;
+
+  private String businessEmail;
+
+  @Builder.Default
+  private Boolean needsReverification = false;
+
+  private String verificationLevel;
+
+  private String verificationMethod;
+
   /** Comma-separated reasons when admin requests more info */
   @Column(length = 1000)
   private String needsInfoReasons;
@@ -152,6 +167,7 @@ public class Place {
     if (socialVerified == null) socialVerified = false;
     if (communityConfirmed == null) communityConfirmed = false;
     if (communityConfirmCount == null) communityConfirmCount = 0;
+    if (needsReverification == null) needsReverification = false;
     if (locationType == null) locationType = LocationType.CAFE;
   }
 }

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,33 +11,56 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { fetchPlace, Place } from "../../src/api/places";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  confirmPlaceInfo,
+  fetchPlace,
+  fetchPlaceMedia,
+  fetchPlaceSpots,
+  Place,
+  reportPlace,
+} from "../../src/api/places";
 import { fetchReviews, submitReview } from "../../src/api/reviews";
 import { toggleFavorite } from "../../src/api/favorites";
+import { isVerificationRequiredError } from "../../src/api/auth";
 import { trackEvent } from "../../src/api/spotted";
 import { useAuth } from "../../src/context/AuthContext";
 import { colors } from "../../src/theme";
+import ClaimVerificationPanel from "../../src/components/ClaimVerificationPanel";
+
+const REPORT_REASONS = ["SPAM", "INAPPROPRIATE", "MISLEADING", "COPYRIGHT", "OTHER"];
 
 export default function PlaceDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, upgrade } = useLocalSearchParams<{ id: string; upgrade?: string }>();
   const { user } = useAuth();
+  const router = useRouter();
+  const openUpgrade = upgrade === "1" || upgrade === "true";
   const [place, setPlace] = useState<Place | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [media, setMedia] = useState<any[]>([]);
+  const [spots, setSpots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const [p, r] = await Promise.all([fetchPlace(id), fetchReviews(id)]);
+        const [p, r, m, s] = await Promise.all([
+          fetchPlace(id),
+          fetchReviews(id),
+          fetchPlaceMedia(id).catch(() => []),
+          fetchPlaceSpots(id).catch(() => []),
+        ]);
         setPlace(p);
         setReviews(Array.isArray(r) ? r : []);
+        setMedia(Array.isArray(m) ? m : []);
+        setSpots(Array.isArray(s) ? s : []);
         trackEvent("place_view", { placeId: Number(id), source: "mobile_detail" });
       } catch (e: any) {
         setError(e?.message || "Unable to load place");
@@ -44,6 +69,17 @@ export default function PlaceDetailScreen() {
       }
     })();
   }, [id]);
+
+  function handleVerifyGate(e: any) {
+    if (isVerificationRequiredError(e)) {
+      Alert.alert("Verify your email", "Verify to use this feature. Links expire in 24 hours.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Verify / Resend", onPress: () => router.push("/verify") },
+      ]);
+      return true;
+    }
+    return false;
+  }
 
   if (loading) {
     return (
@@ -79,21 +115,182 @@ export default function PlaceDetailScreen() {
         <Text style={styles.meta}>
           {displayCount > 0 ? `★ ${displayRating} · ${displayCount} reviews` : "No reviews yet"}
         </Text>
+        {String(place.ownershipStatus || "").toUpperCase() === "UNCLAIMED" ? (
+          <Text style={styles.meta}>Community Added · Not claimed</Text>
+        ) : null}
+        {String(place.ownershipStatus || "").toUpperCase() === "CLAIM_PENDING" ? (
+          <Text style={styles.meta}>Claim pending</Text>
+        ) : null}
+        {String(place.ownershipStatus || "").toUpperCase() === "OWNER_VERIFIED" ? (
+          <Text style={styles.meta}>Verified business</Text>
+        ) : null}
+        {place.hours ? <Text style={styles.meta}>Hours: {place.hours}</Text> : null}
+        {place.phone ? <Text style={styles.meta}>Phone: {place.phone}</Text> : null}
+        {place.address ? <Text style={styles.meta}>{place.address}</Text> : null}
         {place.description ? <Text style={styles.desc}>{place.description}</Text> : null}
 
-        {user ? (
-          <Pressable
-            style={styles.secondaryBtn}
-            onPress={async () => {
-              try {
-                await toggleFavorite(place.id);
-              } catch {
-                /* ignore */
+        <View style={styles.actionsRow}>
+          {user ? (
+            <Pressable
+              style={styles.secondaryBtn}
+              onPress={async () => {
+                try {
+                  await toggleFavorite(place.id);
+                } catch (e: any) {
+                  if (!handleVerifyGate(e)) Alert.alert("Error", e?.message || "Failed");
+                }
+              }}
+            >
+              <Text style={styles.secondaryText}>Save</Text>
+            </Pressable>
+          ) : null}
+          {place.lat != null && place.lng != null ? (
+            <Pressable
+              style={styles.secondaryBtn}
+              onPress={() =>
+                Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`)
               }
-            }}
-          >
-            <Text style={styles.secondaryText}>Toggle save</Text>
-          </Pressable>
+            >
+              <Text style={styles.secondaryText}>Directions</Text>
+            </Pressable>
+          ) : null}
+          {place.website ? (
+            <Pressable style={styles.secondaryBtn} onPress={() => Linking.openURL(place.website!)}>
+              <Text style={styles.secondaryText}>Website</Text>
+            </Pressable>
+          ) : null}
+          {user ? (
+            <Pressable
+              style={styles.secondaryBtn}
+              onPress={() => {
+                Alert.alert(
+                  "Report place",
+                  "Why are you reporting this?",
+                  REPORT_REASONS.map((reason) => ({
+                    text: reason,
+                    onPress: async () => {
+                      try {
+                        await reportPlace(place.id, reason);
+                        Alert.alert("Thanks", "Report submitted.");
+                      } catch (e: any) {
+                        if (!handleVerifyGate(e)) Alert.alert("Error", e?.message || "Failed");
+                      }
+                    },
+                  })).concat([{ text: "Cancel", style: "cancel" } as any])
+                );
+              }}
+            >
+              <Text style={styles.secondaryText}>Report</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {media.length > 0 ? (
+          <>
+            <Text style={styles.section}>Photos</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {media.map((m) =>
+                m.url || m.thumbnailUrl ? (
+                  <Image
+                    key={m.id}
+                    source={{ uri: m.thumbnailUrl || m.url }}
+                    style={styles.thumb}
+                  />
+                ) : null
+              )}
+            </ScrollView>
+          </>
+        ) : null}
+
+        {spots.length > 0 ? (
+          <>
+            <Text style={styles.section}>Spotted here</Text>
+            {spots.slice(0, 5).map((s) => (
+              <Text key={s.id} style={styles.meta}>
+                {s.caption || s.spotKind || `Spot #${s.id}`}
+              </Text>
+            ))}
+          </>
+        ) : null}
+
+        {(() => {
+          const status = String(place.ownershipStatus || "").toUpperCase();
+          const isOwnListing =
+            !!user && place.ownerId != null && String(place.ownerId) === String(user.userId);
+          const canClaim = !!user && !isOwnListing && ["UNCLAIMED", "CLAIM_PENDING"].includes(status);
+          const canRequestAccess =
+            !!user && !isOwnListing && ["OWNER_CLAIMED", "OWNER_VERIFIED"].includes(status);
+          const canUpgrade =
+            !!user && isOwnListing && status !== "OWNER_VERIFIED";
+          return (
+            <>
+              {canClaim ? (
+                <>
+                  <Text style={styles.section}>Claim this business</Text>
+                  <Text style={styles.meta}>
+                    Adding a listing is not ownership. Verify with phone OTP, domain, email, or admin video/docs.
+                  </Text>
+                  <ClaimVerificationPanel placeId={place.id} onComplete={setPlace} />
+                </>
+              ) : null}
+              {canRequestAccess ? (
+                <>
+                  <Text style={styles.section}>Already managed</Text>
+                  <Text style={styles.meta}>Request access or open an ownership dispute for admin review.</Text>
+                  <ClaimVerificationPanel placeId={place.id} mode="managed" onComplete={setPlace} />
+                </>
+              ) : null}
+              {canUpgrade ? (
+                <>
+                  <Text style={styles.section}>Complete verification</Text>
+                  <Text style={styles.meta}>
+                    Prove association with phone, website DNS, business email, or admin video/docs.
+                  </Text>
+                  <ClaimVerificationPanel
+                    placeId={place.id}
+                    mode="upgrade"
+                    initialOpen={openUpgrade}
+                    onComplete={setPlace}
+                  />
+                </>
+              ) : null}
+            </>
+          );
+        })()}
+
+        {user ? (
+          <>
+            <Text style={styles.section}>Confirm information</Text>
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={styles.secondaryBtn}
+                onPress={async () => {
+                  try {
+                    await confirmPlaceInfo(place.id, { accurate: true });
+                    setConfirmMsg("Thanks — info marked as confirmed.");
+                  } catch (e: any) {
+                    if (!handleVerifyGate(e)) setConfirmMsg(e?.message || "Failed");
+                  }
+                }}
+              >
+                <Text style={styles.secondaryText}>Looks correct</Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryBtn}
+                onPress={async () => {
+                  try {
+                    await confirmPlaceInfo(place.id, { accurate: false });
+                    setConfirmMsg("Thanks — corrections queued for review.");
+                  } catch (e: any) {
+                    if (!handleVerifyGate(e)) setConfirmMsg(e?.message || "Failed");
+                  }
+                }}
+              >
+                <Text style={styles.secondaryText}>Needs fix</Text>
+              </Pressable>
+            </View>
+            {confirmMsg ? <Text style={styles.meta}>{confirmMsg}</Text> : null}
+          </>
         ) : null}
 
         <Text style={styles.section}>Reviews</Text>
@@ -125,7 +322,7 @@ export default function PlaceDetailScreen() {
                   setReviews(Array.isArray(r) ? r : []);
                   setText("");
                 } catch (e: any) {
-                  setError(e?.message || "Failed to submit");
+                  if (!handleVerifyGate(e)) setError(e?.message || "Failed to submit");
                 } finally {
                   setSaving(false);
                 }
@@ -164,6 +361,7 @@ const styles = StyleSheet.create({
   meta: { marginTop: 6, color: colors.warm500 },
   desc: { marginTop: 12, color: colors.warm600, lineHeight: 20 },
   section: { marginTop: 24, marginBottom: 8, fontSize: 18, fontWeight: "700", color: colors.warm700 },
+  actionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   form: {
     backgroundColor: colors.white,
     borderRadius: 12,
@@ -181,16 +379,17 @@ const styles = StyleSheet.create({
     color: colors.warm700,
     borderWidth: 1,
     borderColor: colors.warm200,
+    marginTop: 8,
   },
   button: {
     backgroundColor: colors.warm700,
     borderRadius: 16,
     paddingVertical: 10,
     alignItems: "center",
+    marginTop: 8,
   },
   buttonText: { color: colors.cream, fontWeight: "700" },
   secondaryBtn: {
-    marginTop: 12,
     alignSelf: "flex-start",
     borderWidth: 1,
     borderColor: colors.warm200,
@@ -199,6 +398,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   secondaryText: { color: colors.warm700, fontWeight: "700" },
+  thumb: { width: 120, height: 90, borderRadius: 10, marginRight: 8, backgroundColor: colors.warm100 },
   review: {
     backgroundColor: colors.white,
     borderRadius: 12,

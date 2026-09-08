@@ -19,6 +19,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
+  markEmailVerified: () => Promise<void>;
   isOwner: boolean;
 };
 
@@ -114,6 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    void import("../push").then((m) => m.registerForPushNotificationsAsync()).catch(() => undefined);
+  }, [user?.userId]);
+
   const applySession = useCallback(async (session: authApi.AuthSession) => {
     const next: User = {
       userId: session.userId,
@@ -148,6 +154,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await persistUser(null);
   }, []);
 
+  const markEmailVerified = useCallback(async () => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, emailVerified: true };
+      void persistUser(next);
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -155,9 +170,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       signup,
       signOut,
+      markEmailVerified,
       isOwner: user?.role === "OWNER" || user?.role === "ADMIN",
     }),
-    [user, loading, login, signup, signOut]
+    [user, loading, login, signup, signOut, markEmailVerified]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

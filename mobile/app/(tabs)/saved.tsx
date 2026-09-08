@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -67,12 +68,27 @@ export default function SavedScreen() {
       <FlatList
         data={places}
         keyExtractor={(item) => String(item.id)}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={() => { setLoading(true); load(); }} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={() => {
+              setLoading(true);
+              load();
+            }}
+          />
+        }
         ListEmptyComponent={<Text style={styles.empty}>No saved places yet.</Text>}
         renderItem={({ item }) => (
           <Pressable style={styles.card} onPress={() => router.push(`/place/${item.id}`)}>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.meta}>{item.city || item.address || item.category}</Text>
+            {item.image ? <Image source={{ uri: item.image }} style={styles.image} /> : <View style={styles.image} />}
+            <View style={styles.body}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.meta}>
+                {item.category || "Place"}
+                {item.city ? ` · ${item.city}` : ""}
+                {item.rating != null ? ` · ★ ${item.rating}` : ""}
+              </Text>
+            </View>
           </Pressable>
         )}
       />
@@ -87,13 +103,16 @@ const styles = StyleSheet.create({
   button: { backgroundColor: colors.warm700, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
   buttonText: { color: colors.cream, fontWeight: "700" },
   card: {
+    flexDirection: "row",
     backgroundColor: colors.white,
     borderRadius: 12,
-    padding: 14,
+    overflow: "hidden",
     marginBottom: 10,
     borderWidth: 1,
     borderColor: colors.warm100,
   },
+  image: { width: 88, height: 88, backgroundColor: colors.warm100 },
+  body: { flex: 1, padding: 12, justifyContent: "center" },
   name: { fontWeight: "700", color: colors.warm700, fontSize: 16 },
   meta: { marginTop: 4, color: colors.warm500, fontSize: 13 },
   empty: { textAlign: "center", color: colors.warm400, marginTop: 40 },

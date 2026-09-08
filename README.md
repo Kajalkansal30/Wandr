@@ -44,4 +44,5 @@ npx expo start
 Mobile details and EAS notes: [`mobile/README.md`](mobile/README.md)  
 Demo accounts and API details: [`backend/README.md`](backend/README.md)  
 Deploy guide: [`DEPLOY.md`](DEPLOY.md)  
-Media / Cloudinary: [`docs/media-setup.md`](docs/media-setup.md)
+Media / Cloudinary: [`docs/media-setup.md`](docs/media-setup.md)  
+QA checklist (web + Expo): [`docs/QA-TEST-PLAN.md`](docs/QA-TEST-PLAN.md)

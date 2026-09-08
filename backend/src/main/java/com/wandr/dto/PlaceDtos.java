@@ -203,14 +203,20 @@ public class PlaceDtos {
 
     private static List<String> trustDetails(Place p, boolean ownerVerified) {
       java.util.ArrayList<String> list = new java.util.ArrayList<>();
-      if (ownerVerified) list.add("Owner verified");
-      if (Boolean.TRUE.equals(p.getPhoneVerified())) list.add("Phone verified");
+      if (ownerVerified) list.add("Verified business");
+      else if (p.getOwnershipStatus() == OwnershipStatus.OWNER_CLAIMED) {
+        list.add(Boolean.TRUE.equals(p.getNeedsReverification())
+            ? "Managed · re-verification needed"
+            : "Managed · not fully verified");
+      }
+      if (Boolean.TRUE.equals(p.getPhoneVerified())) list.add("Business contact verified");
       if (Boolean.TRUE.equals(p.getLocationVerified())) list.add("Location confirmed");
       if (Boolean.TRUE.equals(p.getBusinessDocVerified())) list.add("Business credentials");
       if (Boolean.TRUE.equals(p.getFssaiVerified())) list.add("FSSAI on file");
       if (Boolean.TRUE.equals(p.getSocialVerified())) list.add("Social matched");
       if (Boolean.TRUE.equals(p.getCommunityConfirmed())) list.add("Community confirmed");
-      if (p.getOwnershipStatus() == OwnershipStatus.UNCLAIMED) list.add("Community listing · unclaimed");
+      if (p.getOwnershipStatus() == OwnershipStatus.UNCLAIMED) list.add("Community Added · Not claimed");
+      if (p.getOwnershipStatus() == OwnershipStatus.CLAIM_PENDING) list.add("Claim pending");
       return list;
     }
 

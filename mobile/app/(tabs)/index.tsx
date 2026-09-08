@@ -14,7 +14,6 @@ import { Link, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { fetchPlaces, Place } from "../../src/api/places";
 import { colors } from "../../src/theme";
-import { API_BASE } from "../../src/api/client";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -81,7 +80,18 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.eyebrow}>Same API as wandrhere.com · {API_BASE}</Text>
+      <Text style={styles.eyebrow}>Discover places near you</Text>
+      <View style={styles.quickRow}>
+        <Pressable style={styles.quickChip} onPress={() => router.push("/lists" as any)}>
+          <Text style={styles.quickText}>Lists</Text>
+        </Pressable>
+        <Pressable style={styles.quickChip} onPress={() => router.push("/whats-new" as any)}>
+          <Text style={styles.quickText}>What's new</Text>
+        </Pressable>
+        <Pressable style={styles.quickChip} onPress={() => router.push("/submit")}>
+          <Text style={styles.quickText}>Add place</Text>
+        </Pressable>
+      </View>
       <TextInput
         value={search}
         onChangeText={setSearch}
@@ -156,6 +166,16 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream, paddingHorizontal: 16, paddingTop: 8 },
   eyebrow: { fontSize: 11, color: colors.warm400, marginBottom: 8 },
+  quickRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
+  quickChip: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.warm200,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  quickText: { color: colors.warm700, fontWeight: "700", fontSize: 12 },
   search: {
     backgroundColor: colors.white,
     borderRadius: 12,

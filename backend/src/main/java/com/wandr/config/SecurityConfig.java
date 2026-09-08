@@ -72,6 +72,7 @@ public class SecurityConfig {
                 "/api/auth/logout"
             ).permitAll()
             .requestMatchers(HttpMethod.POST, "/api/analytics/events").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/places/*/my-claim").authenticated()
             .requestMatchers(HttpMethod.GET, "/api/places", "/api/places/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/spotted/feed").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/media/cloudinary-sign").authenticated()

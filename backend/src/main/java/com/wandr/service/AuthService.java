@@ -31,6 +31,7 @@ public class AuthService {
   private final EmailService emailService;
   private final NotificationService notificationService;
   private final AccountDeletionService accountDeletionService;
+  private final AnalyticsService analyticsService;
 
   @Value("${wandr.jwt.refresh-expiration-ms:604800000}")
   private long refreshExpirationMs;
@@ -59,6 +60,7 @@ public class AuthService {
         .build();
     userRepository.save(user);
     emailService.sendVerification(user.getEmail(), verificationToken);
+    analyticsService.trackAuth(user, "signup", "auth");
     return issueAuth(user, false);
   }
 
@@ -70,6 +72,7 @@ public class AuthService {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
     }
     boolean returning = refreshTokenRepository.countByUserId(user.getId()) > 0;
+    analyticsService.trackAuth(user, "login", "auth");
     return issueAuth(user, returning);
   }
 
@@ -90,6 +93,24 @@ public class AuthService {
     user.setEmailVerificationExpiresAt(null);
     userRepository.save(user);
     return new AuthDtos.MessageResponse("Email verified");
+  }
+
+  @Transactional
+  public AuthDtos.MessageResponse resendVerification(User user) {
+    if (user == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Login required");
+    }
+    User fresh = userRepository.findById(user.getId())
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Login required"));
+    if (fresh.isEmailVerified()) {
+      return new AuthDtos.MessageResponse("Email is already verified");
+    }
+    String verificationToken = UUID.randomUUID().toString();
+    fresh.setEmailVerificationToken(verificationToken);
+    fresh.setEmailVerificationExpiresAt(Instant.now().plus(24, ChronoUnit.HOURS));
+    userRepository.save(fresh);
+    emailService.sendVerification(fresh.getEmail(), verificationToken);
+    return new AuthDtos.MessageResponse("Verification email sent");
   }
 
   @Transactional

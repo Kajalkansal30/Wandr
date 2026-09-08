@@ -93,14 +93,16 @@ export function mapPlace(p) {
 
 function buildTrustDetails(p, verified, ownershipStatus) {
   const list = [];
-  if (verified) list.push("Owner verified");
-  if (p.phoneVerified) list.push("Phone verified");
+  if (verified) list.push("Verified business");
+  else if (ownershipStatus === "OWNER_CLAIMED") list.push("Managed · not fully verified");
+  if (p.phoneVerified) list.push("Business contact verified");
   if (p.locationVerified) list.push("Location confirmed");
   if (p.businessDocVerified) list.push("Business credentials");
   if (p.fssaiVerified) list.push("FSSAI on file");
   if (p.socialVerified) list.push("Social matched");
   if (p.communityConfirmed) list.push("Community confirmed");
-  if (ownershipStatus === "UNCLAIMED") list.push("Community listing · unclaimed");
+  if (ownershipStatus === "UNCLAIMED") list.push("Community Added · Not claimed");
+  if (ownershipStatus === "CLAIM_PENDING") list.push("Claim pending");
   return list;
 }
 
@@ -151,6 +153,51 @@ export async function submitCommunityPlace(body) {
 
 export async function claimPlace(id, body) {
   return api(`/api/places/${id}/claim`, { method: "POST", auth: true, body: body || {} });
+}
+
+export async function fetchMyClaim(id) {
+  try {
+    return await api(`/api/places/${id}/my-claim`, { auth: true });
+  } catch (e) {
+    if (e?.status === 204 || e?.status === 404) return null;
+    throw e;
+  }
+}
+
+export async function fetchClaimMethods(id) {
+  return api(`/api/places/${id}/claim-methods`);
+}
+
+export async function startClaimPhoneOtp(claimId) {
+  return api(`/api/places/claims/${claimId}/phone/start`, { method: "POST", auth: true, body: {} });
+}
+
+export async function verifyClaimPhoneOtp(claimId, code) {
+  return api(`/api/places/claims/${claimId}/phone/verify`, { method: "POST", auth: true, body: { code } });
+}
+
+export async function startClaimBusinessEmail(claimId, email) {
+  return api(`/api/places/claims/${claimId}/email/start`, { method: "POST", auth: true, body: { email } });
+}
+
+export async function verifyClaimBusinessEmail(claimId, token) {
+  return api(`/api/places/claims/${claimId}/email/verify`, { method: "POST", auth: true, body: { token } });
+}
+
+export async function startClaimDomain(claimId) {
+  return api(`/api/places/claims/${claimId}/domain/start`, { method: "POST", auth: true, body: {} });
+}
+
+export async function checkClaimDomain(claimId) {
+  return api(`/api/places/claims/${claimId}/domain/check`, { method: "POST", auth: true, body: {} });
+}
+
+export async function submitClaimVideo(claimId, url, note) {
+  return api(`/api/places/claims/${claimId}/video`, { method: "POST", auth: true, body: { url, note } });
+}
+
+export async function submitClaimDocument(claimId, url, note) {
+  return api(`/api/places/claims/${claimId}/document`, { method: "POST", auth: true, body: { url, note } });
 }
 
 export async function confirmPlaceInfo(id, checks) {

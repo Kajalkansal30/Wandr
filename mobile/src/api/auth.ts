@@ -49,6 +49,11 @@ export async function logout() {
   await clearTokens();
 }
 
+export async function logoutAll() {
+  await api("/api/auth/logout-all", { method: "POST", auth: true });
+  await clearTokens();
+}
+
 export async function forgotPassword(email: string) {
   return api("/api/auth/forgot-password", {
     method: "POST",
@@ -56,9 +61,45 @@ export async function forgotPassword(email: string) {
   });
 }
 
+export async function resetPassword(token: string, newPassword: string) {
+  return api("/api/auth/reset-password", {
+    method: "POST",
+    body: { token, newPassword },
+  });
+}
+
+export async function changePassword(oldPassword: string, newPassword: string) {
+  return api("/api/auth/change-password", {
+    method: "POST",
+    auth: true,
+    body: { oldPassword, newPassword },
+  });
+}
+
+export async function deleteAccount(password: string) {
+  await api("/api/auth/account", {
+    method: "DELETE",
+    auth: true,
+    body: { password },
+  });
+  await clearTokens();
+}
+
 export async function verifyEmail(token: string) {
   return api("/api/auth/verify-email", {
     method: "POST",
     body: { token },
   });
+}
+
+export async function resendVerification() {
+  return api("/api/auth/resend-verification", {
+    method: "POST",
+    auth: true,
+  });
+}
+
+export function isVerificationRequiredError(err: any): boolean {
+  const msg = String(err?.message || "").toLowerCase();
+  return err?.status === 403 && msg.includes("verification");
 }

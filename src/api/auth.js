@@ -58,6 +58,21 @@ export async function verifyEmailRequest(token) {
   });
 }
 
+export async function resendVerificationRequest() {
+  return api("/api/auth/resend-verification", {
+    method: "POST",
+    auth: true,
+  });
+}
+
+export function isVerificationRequiredError(err) {
+  const msg = String(err?.message || err?.code || "").toLowerCase();
+  return (
+    err?.status === 403 &&
+    (msg.includes("verification") || msg.includes("verify") || msg.includes("email not verified"))
+  );
+}
+
 export async function forgotPasswordRequest(email) {
   return api("/api/auth/forgot-password", {
     method: "POST",

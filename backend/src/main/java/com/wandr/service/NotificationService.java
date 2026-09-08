@@ -1,8 +1,10 @@
 package com.wandr.service;
 
 import com.wandr.domain.Notification;
+import com.wandr.domain.PushDeviceToken;
 import com.wandr.dto.NotificationDtos;
 import com.wandr.repo.NotificationRepository;
+import com.wandr.repo.PushDeviceTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import java.util.List;
 public class NotificationService {
 
   private final NotificationRepository notificationRepository;
+  private final PushDeviceTokenRepository pushDeviceTokenRepository;
 
   /**
    * Idempotent create when {@code sourceEventId} is set: same user+type+event skips duplicates.
@@ -91,5 +94,37 @@ public class NotificationService {
   @Transactional(readOnly = true)
   public long unreadCount(Long userId) {
     return notificationRepository.countByUserIdAndReadAtIsNull(userId);
+  }
+
+  @Transactional
+  public NotificationDtos.PushTokenResponse registerPushToken(Long userId, String token, String platform) {
+    if (token == null || token.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "token required");
+    }
+    String trimmed = token.trim();
+    PushDeviceToken row = pushDeviceTokenRepository.findByToken(trimmed).orElse(null);
+    if (row == null) {
+      row = PushDeviceToken.builder()
+          .userId(userId)
+          .token(trimmed)
+          .platform(platform)
+          .build();
+    } else {
+      row.setUserId(userId);
+      row.setPlatform(platform);
+    }
+    pushDeviceTokenRepository.save(row);
+    return new NotificationDtos.PushTokenResponse("registered");
+  }
+
+  @Transactional
+  public void unregisterPushToken(Long userId, String token) {
+    if (token == null || token.isBlank()) return;
+    pushDeviceTokenRepository.deleteByTokenAndUserId(token.trim(), userId);
+  }
+
+  @Transactional(readOnly = true)
+  public List<String> pushTokensForUser(Long userId) {
+    return pushDeviceTokenRepository.findByUserId(userId).stream().map(PushDeviceToken::getToken).toList();
   }
 }

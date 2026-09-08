@@ -7,7 +7,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
-import { fetchPlace, claimPlace, confirmPlaceInfo } from "../api/places";
+import { fetchPlace, confirmPlaceInfo } from "../api/places";
+import ClaimVerificationPanel from "../components/ClaimVerificationPanel";
 import Badge from "../components/Badge";
 import ReviewSection from "../components/ReviewSection";
 import MenuSection from "../components/MenuSection";
@@ -46,10 +47,6 @@ export default function CafeDetailPage() {
     location.hash === "#reviews" ? "Reviews" : "Overview"
   );
   const [imgError, setImgError] = useState(false);
-  const [claimOpen, setClaimOpen] = useState(false);
-  const [claimPhone, setClaimPhone] = useState("");
-  const [claimEvidence, setClaimEvidence] = useState("");
-  const [claimBusy, setClaimBusy] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState("");
   const [spots, setSpots] = useState([]);
@@ -153,23 +150,6 @@ export default function CafeDetailPage() {
     window.open(url, "_blank");
   }
 
-  async function handleClaim() {
-    if (!user) { navigate(`/login?next=/cafe/${cafe.id}`); return; }
-    setClaimBusy(true);
-    try {
-      await claimPlace(cafe.id, { phone: claimPhone, evidence: claimEvidence });
-      trackEvent("claim_complete", { placeId: cafe.id, source: "detail" });
-      setClaimOpen(false);
-      alert("Claim submitted — an admin will review ownership.");
-      const refreshed = await fetchPlace(cafe.id);
-      setCafe(refreshed);
-    } catch (err) {
-      alert(err.message || "Could not submit claim");
-    } finally {
-      setClaimBusy(false);
-    }
-  }
-
   async function handleConfirm(allYes) {
     if (!user) { navigate(`/login?next=/cafe/${cafe.id}`); return; }
     setConfirmBusy(true);
@@ -196,7 +176,9 @@ export default function CafeDetailPage() {
     (role === "owner" || role === "admin") &&
     cafe.ownerId != null &&
     String(cafe.ownerId) === String(user.uid);
-  const canClaim = !isOwnListing && cafe.ownershipStatus === "UNCLAIMED";
+  const canClaim = !isOwnListing && (cafe.ownershipStatus === "UNCLAIMED" || cafe.ownershipStatus === "CLAIM_PENDING");
+  const canRequestAccess = !isOwnListing && (cafe.ownershipStatus === "OWNER_CLAIMED" || cafe.ownershipStatus === "OWNER_VERIFIED");
+  const canUpgradeVerification = isOwnListing && cafe.ownershipStatus !== "OWNER_VERIFIED";
   const toneClass =
     openInfo?.tone === "good"
       ? "text-sage-500"
@@ -547,44 +529,29 @@ export default function CafeDetailPage() {
 
             {canClaim && (
               <div className="rounded-xl border border-dashed border-warm-200 bg-warm-50 p-4">
-                <p className="text-sm font-semibold text-warm-700">Owner hasn&apos;t claimed this place</p>
-                <p className="mt-1 text-xs text-warm-400">Are you the owner or manager?</p>
-                {!claimOpen ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      trackEvent("claim_start", { placeId: cafe.id, source: "detail" });
-                      setClaimOpen(true);
-                    }}
-                    className="mt-3 rounded-xl bg-warm-700 px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    Claim this business
-                  </button>
-                ) : (
-                  <div className="mt-3 space-y-2">
-                    <input
-                      value={claimPhone}
-                      onChange={(e) => setClaimPhone(e.target.value)}
-                      placeholder="Business phone"
-                      className="w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <textarea
-                      value={claimEvidence}
-                      onChange={(e) => setClaimEvidence(e.target.value)}
-                      placeholder="Brief evidence (Instagram, docs, etc.)"
-                      rows={2}
-                      className="w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <button
-                      type="button"
-                      disabled={claimBusy}
-                      onClick={handleClaim}
-                      className="rounded-xl bg-warm-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                    >
-                      {claimBusy ? "Submitting…" : "Submit claim"}
-                    </button>
-                  </div>
-                )}
+                <p className="text-sm font-semibold text-warm-700">
+                  {cafe.ownershipStatus === "CLAIM_PENDING" ? "Claim pending" : "Community Added · Not claimed"}
+                </p>
+                <p className="mt-1 text-xs text-warm-400">
+                  Adding a place is not the same as owning it. Claim only if you are authorized to manage this business.
+                </p>
+                <ClaimVerificationPanel placeId={cafe.id} onComplete={setCafe} />
+              </div>
+            )}
+
+            {canRequestAccess && (
+              <div className="rounded-xl border border-warm-200 bg-white p-4">
+                <p className="text-sm font-semibold text-warm-700">This business is already managed</p>
+                <p className="mt-1 text-xs text-warm-400">Request access from the current manager, or open an ownership dispute for admin review.</p>
+                <ClaimVerificationPanel placeId={cafe.id} mode="managed" onComplete={setCafe} />
+              </div>
+            )}
+
+            {canUpgradeVerification && (
+              <div className="rounded-xl border border-sage-200 bg-sage-50/40 p-4">
+                <p className="text-sm font-semibold text-warm-700">Complete verification</p>
+                <p className="mt-1 text-xs text-warm-400">Finish phone, domain, email, or submit video/docs for a Verified business badge.</p>
+                <ClaimVerificationPanel placeId={cafe.id} mode="upgrade" initialOpen onComplete={setCafe} />
               </div>
             )}
 

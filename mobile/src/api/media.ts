@@ -14,14 +14,16 @@ export async function cloudinarySign(purpose = "spotted") {
  */
 export async function uploadLocalUri(
   uri: string,
-  purpose: "spotted" | "place-cover" = "spotted",
+  purpose: "spotted" | "place-cover" | "claim-evidence" | "claim-document" = "spotted",
   mimeType = "image/jpeg"
 ): Promise<{ url: string; thumbnailUrl: string | null }> {
   const sign = await cloudinarySign(purpose);
   const cloudName = sign.cloudName;
   if (!cloudName) throw new Error("Cloudinary is not configured on the API");
 
-  const resourceType = sign.resourceType || (purpose === "place-cover" ? "image" : "video");
+  const resourceType =
+    sign.resourceType ||
+    (purpose === "place-cover" || purpose === "claim-document" ? "image" : "video");
   const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
 
   const form = new FormData();
@@ -29,8 +31,8 @@ export async function uploadLocalUri(
     uri,
     type: mimeType,
     name:
-      purpose === "place-cover"
-        ? "cover.jpg"
+      purpose === "place-cover" || purpose === "claim-document"
+        ? "file.jpg"
         : mimeType.startsWith("image/")
           ? "spot.jpg"
           : "spot.mp4",
