@@ -31,12 +31,13 @@ function loadRazorpayScript() {
 }
 
 /**
- * Opens Razorpay Checkout (or mock unlock when backend has no keys).
- * Returns true when listing fee is paid.
+ * Opens Razorpay Checkout when RAZORPAY keys are configured on the server.
+ * Without keys, backend returns mock=true and unlocks immediately (dev / pre-keys).
+ * @returns {{ paid: true, mock?: boolean }}
  */
 export async function unlockListingFee({ name, email } = {}) {
   const order = await createListingFeeOrder();
-  if (order.alreadyPaid || order.listingFeePaid) return true;
+  if (order.alreadyPaid || order.listingFeePaid) return { paid: true, mock: false };
 
   if (order.mock) {
     await verifyListingFee({
@@ -44,7 +45,11 @@ export async function unlockListingFee({ name, email } = {}) {
       paymentId: `mock_${Date.now()}`,
       signature: "mock",
     });
-    return true;
+    return { paid: true, mock: true };
+  }
+
+  if (!order.keyId) {
+    throw new Error("Payment is not configured yet. Add Razorpay keys on the server, then try again.");
   }
 
   const Razorpay = await loadRazorpayScript();
@@ -65,7 +70,7 @@ export async function unlockListingFee({ name, email } = {}) {
             paymentId: response.razorpay_payment_id,
             signature: response.razorpay_signature,
           });
-          resolve(true);
+          resolve({ paid: true, mock: false });
         } catch (err) {
           reject(err);
         }

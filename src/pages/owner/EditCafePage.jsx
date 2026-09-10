@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader } from "lucide-react";
+import { Loader } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchMyPlace, updatePlace } from "../../api/owner";
 import MapPinPicker from "../../components/MapPinPicker";
@@ -118,10 +118,7 @@ export default function EditCafePage() {
   return (
     <div className="page-shell page-with-nav pt-6 max-w-3xl">
       <OwnerTopBar subtitle="Update your listing" />
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1.5 text-sm text-warm-500 hover:text-warm-600 transition">
-        <ArrowLeft size={16} /> Back
-      </button>
-      <h1 className="text-2xl font-bold text-warm-700 mb-4">Edit Cafe</h1>
+      <h1 className="mb-4 text-2xl font-bold text-warm-700">Edit Cafe</h1>
 
       <div className="flex gap-1 overflow-x-auto pb-2 mb-6 no-scrollbar">
         {sections.map((s) => (

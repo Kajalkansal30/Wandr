@@ -51,7 +51,7 @@ export default function SignupScreen() {
           onPress={() => setAccountType("OWNER")}
         >
           <Text style={[styles.chipTitle, accountType === "OWNER" && styles.chipTitleOn]}>Café owner</Text>
-          <Text style={[styles.chipSub, accountType === "OWNER" && styles.chipSubOn]}>₹100 unlock</Text>
+          <Text style={[styles.chipSub, accountType === "OWNER" && styles.chipSubOn]}>Business Hub</Text>
         </Pressable>
       </View>
       <TextInput

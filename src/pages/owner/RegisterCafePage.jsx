@@ -198,10 +198,13 @@ export default function RegisterCafePage() {
 
   return (
     <div className="page-shell page-with-nav max-w-3xl pt-6">
-      <OwnerTopBar subtitle="Add a new place to Wandr" />
+      <OwnerTopBar
+        subtitle="Add a new place to Wandr"
+        showBack={false}
+      />
       <button
         type="button"
-        onClick={() => (step > 0 ? setStep(step - 1) : navigate(-1))}
+        onClick={() => (step > 0 ? setStep(step - 1) : navigate("/owner/dashboard"))}
         className="mb-4 flex items-center gap-1.5 text-sm text-warm-500 transition hover:text-warm-600"
       >
         <ArrowLeft size={16} /> Back

@@ -36,20 +36,25 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
   const [liked, setLiked] = useState(spot.likedByMe);
   const [likeCount, setLikeCount] = useState(spot.likeCount || 0);
   const [reporting, setReporting] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const place = spot.place;
   const saved = place && savedIds.includes(String(place.id));
+  const poster = spot.thumbnailUrl || place?.image || null;
 
   useEffect(() => {
     setLiked(spot.likedByMe);
     setLikeCount(spot.likeCount || 0);
-  }, [spot.id, spot.likedByMe, spot.likeCount]);
+    setVideoFailed(false);
+  }, [spot.id, spot.likedByMe, spot.likeCount, spot.url]);
 
   useEffect(() => {
     const el = videoRef.current;
-    if (!el) return;
+    if (!el || videoFailed) return;
     el.muted = muted;
     if (active) {
-      el.play().catch(() => {});
+      const tryPlay = () => el.play().catch(() => {});
+      if (el.readyState >= 2) tryPlay();
+      else el.addEventListener("loadeddata", tryPlay, { once: true });
       trackEvent("spot_view", { placeId: place?.id, source: "spotted", metadata: { spotId: spot.id } });
       const tokens = [
         ...(place?.tags || []),
@@ -59,10 +64,10 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
         ...tokenizeTasteText(spot.spotKind || ""),
       ].filter(Boolean);
       recordTasteSignals(tokens, 1.5);
-    } else {
-      el.pause();
+      return () => el.removeEventListener("loadeddata", tryPlay);
     }
-  }, [active, muted, spot.id, place?.id]);
+    el.pause();
+  }, [active, muted, spot.id, place?.id, videoFailed]);
 
   async function onLike() {
     if (!user) {
@@ -137,17 +142,29 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
   const dist = formatDistance(place?.distance);
 
   return (
-    <section className="relative h-[100dvh] w-full shrink-0 snap-start snap-always overflow-hidden bg-warm-800 md:h-full">
-      <video
-        ref={videoRef}
-        src={spot.url}
-        poster={spot.thumbnailUrl || undefined}
-        className="absolute inset-0 h-full w-full object-cover"
-        playsInline
-        loop
-        muted={muted}
-        preload="metadata"
-      />
+    <section className="relative h-full min-h-[100dvh] w-full shrink-0 snap-start snap-always overflow-hidden bg-warm-800 md:min-h-full">
+      {poster && (
+        <img
+          src={poster}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
+      )}
+      {!videoFailed && spot.url && (
+        <video
+          ref={videoRef}
+          src={spot.url}
+          poster={poster || undefined}
+          className="absolute inset-0 h-full w-full object-cover"
+          playsInline
+          loop
+          muted={muted}
+          autoPlay={active}
+          preload="auto"
+          onError={() => setVideoFailed(true)}
+        />
+      )}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/35" />
 
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-[max(6.5rem,calc(5.5rem+env(safe-area-inset-bottom)))] md:pb-8">
@@ -302,31 +319,31 @@ export default function SpottedPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-cream md:flex md:justify-center md:bg-warm-100 md:py-0">
-      {/* Phone-width column on desktop; full-bleed on mobile */}
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-warm-800 md:min-h-dvh md:shadow-2xl">
+    <div className="h-dvh bg-cream md:flex md:justify-center md:bg-warm-100">
+      {/* Phone-width column on desktop; full viewport height */}
+      <div className="relative mx-auto flex h-dvh w-full max-w-[480px] flex-col overflow-hidden bg-warm-800 md:shadow-2xl">
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/55 to-transparent pt-[env(safe-area-inset-top)]">
-          <div className="pointer-events-auto flex items-center justify-between gap-3 px-4 py-3">
-            <div className="flex min-w-0 items-center gap-2">
+          <div className="pointer-events-auto flex items-start justify-between gap-3 px-4 py-3">
+            <div className="flex min-w-0 items-start gap-2">
               <button
                 type="button"
                 onClick={goBack}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-black/50"
+                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-black/50"
                 aria-label="Back"
               >
                 <ArrowLeft size={18} />
               </button>
-              <div className="min-w-0">
-                <Link to="/" className="block truncate text-lg font-bold text-white hover:opacity-90" style={{ fontFamily: "var(--font-display)" }}>
+              <div className="min-w-0 pt-0.5">
+                <Link to="/" className="block truncate text-lg font-bold leading-tight text-white hover:opacity-90" style={{ fontFamily: "var(--font-display)" }}>
                   Spotted
                 </Link>
-                <p className="truncate text-[11px] text-white/65">See what’s worth discovering around you</p>
+                <p className="mt-0.5 truncate text-[11px] leading-snug text-white/65">See what’s worth discovering around you</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => navigate(user ? "/spotted/create" : "/login?next=/spotted/create")}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur"
+              className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur"
             >
               <Plus size={14} /> Spot
             </button>
@@ -385,10 +402,10 @@ export default function SpottedPage() {
         ) : (
           <div
             ref={scrollerRef}
-            className="h-[100dvh] flex-1 snap-y snap-mandatory overflow-y-scroll scrollbar-none md:h-auto"
+            className="h-full snap-y snap-mandatory overflow-y-scroll scrollbar-none"
           >
             {spots.map((spot, i) => (
-              <div key={spot.id} data-spot-slide data-idx={i} className="md:h-full md:min-h-[100dvh]">
+              <div key={spot.id} data-spot-slide data-idx={i} className="h-full min-h-full">
                 <SpotSlide
                   spot={spot}
                   active={i === activeIdx}

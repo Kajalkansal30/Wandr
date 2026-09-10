@@ -1,31 +1,30 @@
-/** Demo Spotted videos — real playable MP4s (Mixkit café clips) for empty feeds / API fallback. */
+/** Demo Spotted videos — public Google sample MP4s (reliable cross-origin playback) + café posters. */
 import mockCafes from "./cafes";
 
-/** Café-themed stock clips + posters (public HTTPS MP4s). */
 const DEMO_CLIPS = [
   {
-    url: "https://assets.mixkit.co/videos/5590/5590-720.mp4",
-    thumbnailUrl: "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
+    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=720&q=80",
   },
   {
-    url: "https://assets.mixkit.co/videos/5569/5569-720.mp4",
-    thumbnailUrl: "https://assets.mixkit.co/videos/5569/5569-thumb-720-0.jpg",
+    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=720&q=80",
   },
   {
-    url: "https://assets.mixkit.co/videos/3577/3577-720.mp4",
-    thumbnailUrl: "https://assets.mixkit.co/videos/3577/3577-thumb-720-0.jpg",
+    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?w=720&q=80",
   },
   {
-    url: "https://assets.mixkit.co/videos/46567/46567-720.mp4",
-    thumbnailUrl: "https://assets.mixkit.co/videos/46567/46567-thumb-720-0.jpg",
+    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=720&q=80",
   },
   {
-    url: "https://assets.mixkit.co/videos/43372/43372-720.mp4",
-    thumbnailUrl: "https://assets.mixkit.co/videos/43372/43372-thumb-720-0.jpg",
+    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=720&q=80",
   },
   {
-    url: "https://assets.mixkit.co/videos/5590/5590-720.mp4",
-    thumbnailUrl: "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
+    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=720&q=80",
   },
 ];
 
@@ -73,7 +72,7 @@ const SEED = [
     placeId: "3",
     ...DEMO_CLIPS[2],
     spotKind: "FOOD",
-    caption: "Espresso machine steam and single-origin flat whites.",
+    caption: "Espresso steam and single-origin flat whites.",
     likeCount: 31,
   },
   {

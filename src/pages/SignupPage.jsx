@@ -139,7 +139,7 @@ export default function SignupPage() {
                 >
                   <p className="text-sm font-semibold">Café owner</p>
                   <p className={`mt-1 text-xs ${accountType === "OWNER" ? "text-cream/80" : "text-warm-400"}`}>
-                    Same app + Business Hub. ₹100 unlock.
+                    Same app + Business Hub for listings.
                   </p>
                 </button>
               </div>
@@ -217,7 +217,7 @@ export default function SignupPage() {
           </form>
 
           <p className="mt-6 text-xs text-warm-400">
-            We&apos;ll send a verification link to your email. Café owners unlock listings with a one-time ₹100 payment in Business Hub.
+            We&apos;ll send a verification link to your email. Café owners finish listing setup in Business Hub after signup.
           </p>
 
           <p className="mt-8 text-center text-sm text-warm-500">

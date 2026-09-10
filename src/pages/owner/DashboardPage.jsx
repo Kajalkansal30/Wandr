@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [feePaid, setFeePaid] = useState(null);
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState("");
+  const [payNotice, setPayNotice] = useState("");
   const tab = searchParams.get("tab") || "cafes";
   const setActiveTab = (id) => setSearchParams(id === "cafes" ? {} : { tab: id });
 
@@ -72,10 +73,18 @@ export default function DashboardPage() {
 
   async function handleUnlock() {
     setPayError("");
+    setPayNotice("");
     setPayBusy(true);
     try {
-      await unlockListingFee({ name: user?.displayName, email: user?.email });
+      const result = await unlockListingFee({ name: user?.displayName, email: user?.email });
       setFeePaid(true);
+      if (result?.mock) {
+        setPayNotice(
+          "Hub unlocked without Razorpay (server keys not set yet). Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET for real checkout — then Add listing."
+        );
+      } else {
+        setPayNotice("Payment successful — you can add a listing now.");
+      }
     } catch (err) {
       setPayError(err.message || "Payment failed");
     } finally {
@@ -216,6 +225,12 @@ export default function DashboardPage() {
         ) : null}
       </div>
 
+      {payNotice && (
+        <div className="mb-6 rounded-xl border border-sage-200 bg-sage-50 px-4 py-3 text-sm text-sage-700">
+          {payNotice}
+        </div>
+      )}
+
       {feePaid === false && (
         <div className="mb-8 rounded-2xl border border-warm-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-bold text-warm-700" style={{ fontFamily: "var(--font-display)" }}>
@@ -223,6 +238,7 @@ export default function DashboardPage() {
           </h3>
           <p className="mt-2 text-sm text-warm-500">
             Pay once to list unlimited cafés. Each listing goes live after business phone OTP — no admin wait.
+            Real Razorpay checkout appears only after keys are set on the server.
           </p>
           {payError && (
             <p className="mt-3 rounded-lg border border-terracotta-100 bg-terracotta-50 px-3 py-2 text-sm text-terracotta-500">

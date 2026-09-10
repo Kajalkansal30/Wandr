@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Rocket, Check } from "lucide-react";
+import { Rocket, Check } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchMyPlaces } from "../../api/owner";
 import { createBoost } from "../../api/ownerAnalytics";
@@ -131,13 +131,6 @@ export default function BoostPage() {
   return (
     <div className="page-shell page-with-nav pt-6 md:pt-8">
       <OwnerTopBar subtitle="Promote your place nearby" />
-      <button
-        type="button"
-        onClick={() => navigate("/owner/dashboard?tab=promote")}
-        className="mb-4 flex items-center gap-1.5 text-sm text-warm-500 hover:text-warm-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
 
       <div className="mb-6 flex items-start gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-warm-700 text-white">

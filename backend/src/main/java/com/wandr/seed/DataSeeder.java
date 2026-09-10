@@ -186,34 +186,34 @@ public class DataSeeder implements CommandLineRunner {
     List<Seed> seeds = new java.util.ArrayList<>();
     if (moon != null) {
       seeds.add(new Seed(moon,
-          "https://assets.mixkit.co/videos/5590/5590-720.mp4",
-          "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=720&q=80",
           SpotKind.AMBIENCE, "Quiet pour-overs and soft light — worth discovering in Hauz Khas.", 42));
       seeds.add(new Seed(moon,
-          "https://assets.mixkit.co/videos/43372/43372-720.mp4",
-          "https://assets.mixkit.co/videos/43372/43372-thumb-720-0.jpg",
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=720&q=80",
           SpotKind.NEW_CAFE, "Morning coffee ritual — freshly opened spot finding its rhythm.", 19));
     }
     if (little != null) {
       seeds.add(new Seed(little,
-          "https://assets.mixkit.co/videos/5569/5569-720.mp4",
-          "https://assets.mixkit.co/videos/5569/5569-thumb-720-0.jpg",
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=720&q=80",
           SpotKind.HIDDEN_GEM, "A tiny garden café that still feels under the radar.", 88));
     }
     if (brew != null) {
       seeds.add(new Seed(brew,
-          "https://assets.mixkit.co/videos/3577/3577-720.mp4",
-          "https://assets.mixkit.co/videos/3577/3577-thumb-720-0.jpg",
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+          "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?w=720&q=80",
           SpotKind.FOOD, "Espresso machine steam and single-origin flat whites.", 31));
       seeds.add(new Seed(brew,
-          "https://assets.mixkit.co/videos/5590/5590-720.mp4",
-          "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=720&q=80",
           SpotKind.EXPERIENCE, "Laptop-friendly corner with a proper barista pour.", 27));
     }
     if (saffron != null) {
       seeds.add(new Seed(saffron,
-          "https://assets.mixkit.co/videos/46567/46567-720.mp4",
-          "https://assets.mixkit.co/videos/46567/46567-thumb-720-0.jpg",
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+          "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=720&q=80",
           SpotKind.NEW_MENU, "New pistachio tiramisu just landed — dessert hour.", 56));
     }
 
@@ -234,7 +234,7 @@ public class DataSeeder implements CommandLineRunner {
     }
   }
 
-  /** Swap old Google sample MP4s for café Mixkit clips so existing DB rows play better. */
+  /** Refresh Mixkit / broken demo URLs to reliable Google sample MP4s + Unsplash posters. */
   private void refreshLegacyDemoSpotUrls() {
     List<PlaceMedia> media = placeMediaRepository.findByStatusAndMediaTypeOrderByCreatedAtDesc(
         MediaStatus.APPROVED,
@@ -242,23 +242,23 @@ public class DataSeeder implements CommandLineRunner {
         org.springframework.data.domain.PageRequest.of(0, 40)
     );
     String[] urls = {
-        "https://assets.mixkit.co/videos/5590/5590-720.mp4",
-        "https://assets.mixkit.co/videos/5569/5569-720.mp4",
-        "https://assets.mixkit.co/videos/3577/3577-720.mp4",
-        "https://assets.mixkit.co/videos/46567/46567-720.mp4",
-        "https://assets.mixkit.co/videos/43372/43372-720.mp4",
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
     };
     String[] thumbs = {
-        "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
-        "https://assets.mixkit.co/videos/5569/5569-thumb-720-0.jpg",
-        "https://assets.mixkit.co/videos/3577/3577-thumb-720-0.jpg",
-        "https://assets.mixkit.co/videos/46567/46567-thumb-720-0.jpg",
-        "https://assets.mixkit.co/videos/43372/43372-thumb-720-0.jpg",
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=720&q=80",
+        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=720&q=80",
+        "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?w=720&q=80",
+        "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=720&q=80",
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=720&q=80",
     };
     int i = 0;
     for (PlaceMedia m : media) {
       String u = m.getUrl() == null ? "" : m.getUrl();
-      if (u.contains("gtv-videos-bucket") || u.contains("ForBigger")) {
+      if (u.contains("mixkit.co") || u.contains("gtv-videos-bucket") || u.contains("ForBigger")) {
         m.setUrl(urls[i % urls.length]);
         m.setThumbnailUrl(thumbs[i % thumbs.length]);
         placeMediaRepository.save(m);
