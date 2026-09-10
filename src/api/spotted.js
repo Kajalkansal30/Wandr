@@ -4,6 +4,8 @@ import {
   getDemoSpotsForPlace,
   addDemoSpot,
   toggleDemoLike,
+  repairSpotVideoUrl,
+  repairSpotThumbnail,
 } from "../data/demoSpots";
 
 function mapPlaceCard(p) {
@@ -27,12 +29,15 @@ function mapPlaceCard(p) {
 
 export function mapSpot(s) {
   if (!s) return null;
+  const salt = Number(s.id) || 0;
+  const rawUrl = s.url;
+  const url = repairSpotVideoUrl(rawUrl, salt);
   return {
     id: String(s.id),
     placeId: String(s.placeId),
     userId: s.userId != null ? String(s.userId) : null,
-    url: s.url,
-    thumbnailUrl: s.thumbnailUrl,
+    url,
+    thumbnailUrl: repairSpotThumbnail(rawUrl, s.thumbnailUrl, salt),
     mediaType: s.mediaType,
     spotKind: s.spotKind,
     caption: s.caption,

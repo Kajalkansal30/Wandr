@@ -186,33 +186,33 @@ public class DataSeeder implements CommandLineRunner {
     List<Seed> seeds = new java.util.ArrayList<>();
     if (moon != null) {
       seeds.add(new Seed(moon,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "https://download.samplelib.com/mp4/sample-5s.mp4",
           "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=720&q=80",
           SpotKind.AMBIENCE, "Quiet pour-overs and soft light — worth discovering in Hauz Khas.", 42));
       seeds.add(new Seed(moon,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "https://www.w3schools.com/html/mov_bbb.mp4",
           "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=720&q=80",
           SpotKind.NEW_CAFE, "Morning coffee ritual — freshly opened spot finding its rhythm.", 19));
     }
     if (little != null) {
       seeds.add(new Seed(little,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "https://download.samplelib.com/mp4/sample-10s.mp4",
           "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=720&q=80",
           SpotKind.HIDDEN_GEM, "A tiny garden café that still feels under the radar.", 88));
     }
     if (brew != null) {
       seeds.add(new Seed(brew,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+          "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
           "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?w=720&q=80",
           SpotKind.FOOD, "Espresso machine steam and single-origin flat whites.", 31));
       seeds.add(new Seed(brew,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
           "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=720&q=80",
           SpotKind.EXPERIENCE, "Laptop-friendly corner with a proper barista pour.", 27));
     }
     if (saffron != null) {
       seeds.add(new Seed(saffron,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+          "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
           "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=720&q=80",
           SpotKind.NEW_MENU, "New pistachio tiramisu just landed — dessert hour.", 56));
     }
@@ -234,7 +234,7 @@ public class DataSeeder implements CommandLineRunner {
     }
   }
 
-  /** Refresh Mixkit / broken demo URLs to reliable Google sample MP4s + Unsplash posters. */
+  /** Refresh Mixkit / Google-sample URLs that often 403 when hotlinked. */
   private void refreshLegacyDemoSpotUrls() {
     List<PlaceMedia> media = placeMediaRepository.findByStatusAndMediaTypeOrderByCreatedAtDesc(
         MediaStatus.APPROVED,
@@ -242,11 +242,11 @@ public class DataSeeder implements CommandLineRunner {
         org.springframework.data.domain.PageRequest.of(0, 40)
     );
     String[] urls = {
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+        "https://download.samplelib.com/mp4/sample-5s.mp4",
+        "https://download.samplelib.com/mp4/sample-10s.mp4",
+        "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
+        "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+        "https://www.w3schools.com/html/mov_bbb.mp4",
     };
     String[] thumbs = {
         "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=720&q=80",

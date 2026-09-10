@@ -1,32 +1,51 @@
-/** Demo Spotted videos — public Google sample MP4s (reliable cross-origin playback) + café posters. */
+/** Demo Spotted videos — public sample MP4s that allow hotlinking (Google gtv samples often 403). */
 import mockCafes from "./cafes";
 
 const DEMO_CLIPS = [
   {
-    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    url: "https://download.samplelib.com/mp4/sample-5s.mp4",
     thumbnailUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=720&q=80",
   },
   {
-    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    url: "https://download.samplelib.com/mp4/sample-10s.mp4",
     thumbnailUrl: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=720&q=80",
   },
   {
-    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    url: "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
     thumbnailUrl: "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?w=720&q=80",
   },
   {
-    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    url: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
     thumbnailUrl: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=720&q=80",
   },
   {
-    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    url: "https://www.w3schools.com/html/mov_bbb.mp4",
     thumbnailUrl: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=720&q=80",
   },
   {
-    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    url: "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
     thumbnailUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=720&q=80",
   },
 ];
+
+/** Known-broken demo hosts → working clip (same index cycling). */
+export function repairSpotVideoUrl(url, salt = 0) {
+  if (!url || typeof url !== "string") return url;
+  const broken =
+    url.includes("gtv-videos-bucket") ||
+    url.includes("ForBigger") ||
+    url.includes("mixkit.co");
+  if (!broken) return url;
+  return DEMO_CLIPS[Math.abs(salt) % DEMO_CLIPS.length].url;
+}
+
+export function repairSpotThumbnail(url, thumb, salt = 0) {
+  const fixedUrl = repairSpotVideoUrl(url, salt);
+  if (fixedUrl !== url || !thumb) {
+    return DEMO_CLIPS[Math.abs(salt) % DEMO_CLIPS.length].thumbnailUrl;
+  }
+  return thumb;
+}
 
 function placeCard(cafe, distance) {
   if (!cafe) return null;

@@ -37,6 +37,8 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
   const [likeCount, setLikeCount] = useState(spot.likeCount || 0);
   const [reporting, setReporting] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false);
   const place = spot.place;
   const saved = place && savedIds.includes(String(place.id));
   const poster = spot.thumbnailUrl || place?.image || null;
@@ -45,29 +47,65 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
     setLiked(spot.likedByMe);
     setLikeCount(spot.likeCount || 0);
     setVideoFailed(false);
+    setPlaying(false);
+    setNeedsTap(false);
   }, [spot.id, spot.likedByMe, spot.likeCount, spot.url]);
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el || videoFailed) return;
+    el.defaultMuted = true;
     el.muted = muted;
-    if (active) {
-      const tryPlay = () => el.play().catch(() => {});
-      if (el.readyState >= 2) tryPlay();
-      else el.addEventListener("loadeddata", tryPlay, { once: true });
-      trackEvent("spot_view", { placeId: place?.id, source: "spotted", metadata: { spotId: spot.id } });
-      const tokens = [
-        ...(place?.tags || []),
-        place?.category,
-        ...(place?.bestFor || []),
-        ...tokenizeTasteText(spot.caption || ""),
-        ...tokenizeTasteText(spot.spotKind || ""),
-      ].filter(Boolean);
-      recordTasteSignals(tokens, 1.5);
-      return () => el.removeEventListener("loadeddata", tryPlay);
+
+    if (!active) {
+      el.pause();
+      setPlaying(false);
+      return;
     }
-    el.pause();
-  }, [active, muted, spot.id, place?.id, videoFailed]);
+
+    const tryPlay = () => {
+      const p = el.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => {
+          setPlaying(true);
+          setNeedsTap(false);
+        }).catch(() => {
+          setNeedsTap(true);
+          setPlaying(false);
+        });
+      }
+    };
+
+    if (el.readyState >= 2) tryPlay();
+    else {
+      el.addEventListener("loadeddata", tryPlay, { once: true });
+      el.load();
+    }
+
+    trackEvent("spot_view", { placeId: place?.id, source: "spotted", metadata: { spotId: spot.id } });
+    const tokens = [
+      ...(place?.tags || []),
+      place?.category,
+      ...(place?.bestFor || []),
+      ...tokenizeTasteText(spot.caption || ""),
+      ...tokenizeTasteText(spot.spotKind || ""),
+    ].filter(Boolean);
+    recordTasteSignals(tokens, 1.5);
+
+    return () => el.removeEventListener("loadeddata", tryPlay);
+  }, [active, muted, spot.id, place?.id, videoFailed, spot.url]);
+
+  function tapToPlay() {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = muted;
+    el.play()
+      .then(() => {
+        setPlaying(true);
+        setNeedsTap(false);
+      })
+      .catch(() => setNeedsTap(true));
+  }
 
   async function onLike() {
     if (!user) {
@@ -147,25 +185,47 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
         <img
           src={poster}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+            playing && !videoFailed ? "opacity-0" : "opacity-100"
+          }`}
           draggable={false}
         />
       )}
       {!videoFailed && spot.url && (
         <video
+          key={spot.url}
           ref={videoRef}
           src={spot.url}
           poster={poster || undefined}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 z-[1] h-full w-full object-cover"
           playsInline
           loop
           muted={muted}
-          autoPlay={active}
           preload="auto"
-          onError={() => setVideoFailed(true)}
+          onPlaying={() => {
+            setPlaying(true);
+            setNeedsTap(false);
+          }}
+          onPause={() => setPlaying(false)}
+          onError={() => {
+            setVideoFailed(true);
+            setPlaying(false);
+          }}
         />
       )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/35" />
+      {needsTap && !videoFailed && (
+        <button
+          type="button"
+          onClick={tapToPlay}
+          className="absolute inset-0 z-[2] flex items-center justify-center bg-black/25"
+          aria-label="Play video"
+        >
+          <span className="rounded-full bg-black/55 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur">
+            Tap to play
+          </span>
+        </button>
+      )}
+      <div className="pointer-events-none absolute inset-0 z-[3] bg-gradient-to-t from-black/75 via-black/15 to-black/35" />
 
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-[max(6.5rem,calc(5.5rem+env(safe-area-inset-bottom)))] md:pb-8">
         <div className="flex items-end gap-3">

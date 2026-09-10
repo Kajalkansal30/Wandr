@@ -36,6 +36,34 @@ Sign endpoint: `POST /api/media/cloudinary-sign?purpose=spotted|place-cover`
 3. Confirm the asset appears under Cloudinary Media Library in `spotted/{userId}/`  
 4. Confirm the spot row in Postgres has https URLs only  
 
+## Add a video to the DB (production)
+
+**Preferred:** Spotted → **+ Spot** (needs Cloudinary env vars above). File goes to Cloudinary; API stores `url` + `thumbnail_url` in `place_media` as `APPROVED`.
+
+**Manual SQL** (Supabase / Postgres) — only if you already have a public https MP4:
+
+```sql
+INSERT INTO place_media (
+  place_id, user_id, url, thumbnail_url, media_type, spot_kind, caption,
+  duration_sec, like_count, source, status, created_at
+) VALUES (
+  2,                    -- existing place id
+  1,                    -- your user id (optional)
+  'https://YOUR-CLOUDINARY-OR-CDN/video.mp4',
+  'https://YOUR-THUMB.jpg',
+  'VIDEO',
+  'AMBIENCE',
+  'Short caption for Spotted',
+  12,
+  0,
+  'COMMUNITY',
+  'APPROVED',
+  NOW()
+);
+```
+
+Do **not** use Google `gtv-videos-bucket` sample URLs — they often return **403** and Spotted falls back to the café photo.
+
 ## Security notes
 
 - API **secret** never ships in the Vite bundle  
