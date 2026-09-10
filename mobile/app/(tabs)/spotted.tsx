@@ -18,6 +18,7 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { fetchSpottedFeed, reportSpot, toggleSpotLike } from "../../src/api/spotted";
 import { colors } from "../../src/theme";
 import { useAuth } from "../../src/context/AuthContext";
+import * as Location from "expo-location";
 
 const REPORT_REASONS = ["SPAM", "INAPPROPRIATE", "MISLEADING", "COPYRIGHT", "OTHER"];
 
@@ -150,7 +151,29 @@ export default function SpottedScreen() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const data = await fetchSpottedFeed({ filter: "all", limit: 40 });
+      let lat: number | null = null;
+      let lng: number | null = null;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+          ]);
+          if (loc && "coords" in loc) {
+            lat = loc.coords.latitude;
+            lng = loc.coords.longitude;
+          }
+        }
+      } catch {
+        /* optional — feed still ranks without GPS */
+      }
+      const data = await fetchSpottedFeed({
+        filter: "all",
+        limit: 40,
+        lat,
+        lng,
+      });
       const list = Array.isArray(data) ? data : [];
       setSpots(list);
       if (list[0]?.id != null) setActiveId(list[0].id);

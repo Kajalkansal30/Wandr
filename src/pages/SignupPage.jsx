@@ -1,11 +1,20 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft, MapPin } from "lucide-react";
+
+function safeNextPath(raw) {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
 
 export default function SignupPage() {
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const nextPath = safeNextPath(params.get("next"));
+  const intentOwner = nextPath?.startsWith("/owner") || params.get("as") === "owner";
+  const [accountType, setAccountType] = useState(intentOwner ? "OWNER" : "USER");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,8 +54,12 @@ export default function SignupPage() {
     setLoading(true);
     try {
       localStorage.setItem("wandr_onboarded", "1");
-      await signup(email, password, name);
-      navigate("/");
+      await signup(email, password, name, accountType);
+      if (accountType === "OWNER") {
+        navigate(nextPath?.startsWith("/owner") ? nextPath : "/owner/dashboard");
+      } else {
+        navigate(nextPath && !nextPath.startsWith("/owner") ? nextPath : "/");
+      }
     } catch (err) {
       setError(err.message || "Signup failed. Please try again.");
     } finally {
@@ -74,7 +87,7 @@ export default function SignupPage() {
           <div>
             <img src="/logo.png" alt="Wandr" className="h-14 w-auto object-contain drop-shadow-md sm:h-16" />
             <p className="mt-4 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">
-              Create an account to save places, leave reviews, and submit spots.
+              Create an Explorer account for free, or a Café owner account with Business Hub.
             </p>
           </div>
         </div>
@@ -87,7 +100,7 @@ export default function SignupPage() {
               Join Wandr
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-warm-500">
-              Business owners: sign up here, then claim your café from its page. Owner role is granted after verification.
+              Pick your account type. Accounts are separate — Explorer and Café owner cannot convert in-app.
             </p>
           </div>
 
@@ -97,6 +110,40 @@ export default function SignupPage() {
                 {error}
               </div>
             )}
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-warm-600">I am…</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAccountType("USER")}
+                  className={`rounded-xl border px-3 py-3 text-left transition ${
+                    accountType === "USER"
+                      ? "border-warm-700 bg-warm-700 text-cream"
+                      : "border-warm-200 bg-white text-warm-700 hover:border-warm-400"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">Explorer</p>
+                  <p className={`mt-1 text-xs ${accountType === "USER" ? "text-cream/80" : "text-warm-400"}`}>
+                    Save places, Spotted, reviews. Free.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountType("OWNER")}
+                  className={`rounded-xl border px-3 py-3 text-left transition ${
+                    accountType === "OWNER"
+                      ? "border-warm-700 bg-warm-700 text-cream"
+                      : "border-warm-200 bg-white text-warm-700 hover:border-warm-400"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">Café owner</p>
+                  <p className={`mt-1 text-xs ${accountType === "OWNER" ? "text-cream/80" : "text-warm-400"}`}>
+                    Same app + Business Hub. ₹100 unlock.
+                  </p>
+                </button>
+              </div>
+            </div>
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-warm-600">Display name</label>
@@ -163,19 +210,19 @@ export default function SignupPage() {
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               ) : (
                 <>
-                  Create account <ArrowRight size={18} />
+                  Create {accountType === "OWNER" ? "owner" : "explorer"} account <ArrowRight size={18} />
                 </>
               )}
             </button>
           </form>
 
           <p className="mt-6 text-xs text-warm-400">
-            We&apos;ll send a verification link to your email. Verify before posting reviews or submitting places.
+            We&apos;ll send a verification link to your email. Café owners unlock listings with a one-time ₹100 payment in Business Hub.
           </p>
 
           <p className="mt-8 text-center text-sm text-warm-500">
             Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-warm-700 hover:underline">
+            <Link to={accountType === "OWNER" ? "/login?next=/owner/dashboard" : "/login"} className="font-semibold text-warm-700 hover:underline">
               Sign In
             </Link>
           </p>

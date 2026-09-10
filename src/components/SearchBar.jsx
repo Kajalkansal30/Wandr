@@ -47,7 +47,7 @@ export default function SearchBar({
   const showDropdown = focused && !value;
 
   return (
-    <div ref={wrapRef} className={`relative ${compact ? "max-w-[46rem]" : ""}`}>
+    <div ref={wrapRef} className={`relative ${compact ? "max-w-[46rem]" : ""} ${showDropdown ? "z-50" : ""}`}>
       <Search
         size={18}
         className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-warm-300"
@@ -76,7 +76,7 @@ export default function SearchBar({
       )}
 
       {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-40 mt-2 animate-fade-in overflow-hidden rounded-xl border border-warm-100 bg-white shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 animate-fade-in overflow-hidden rounded-xl border border-warm-100 bg-white shadow-xl">
           <div className="border-b border-warm-50 p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-warm-400">Discover</p>
             <div className="flex flex-wrap gap-2">

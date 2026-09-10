@@ -14,6 +14,7 @@ import { colors } from "../src/theme";
 export default function SignupScreen() {
   const { signup } = useAuth();
   const router = useRouter();
+  const [accountType, setAccountType] = useState<"USER" | "OWNER">("USER");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,8 +25,9 @@ export default function SignupScreen() {
     setBusy(true);
     setError(null);
     try {
-      await signup(email.trim(), password, displayName.trim());
-      router.replace("/(tabs)/profile");
+      await signup(email.trim(), password, displayName.trim(), accountType);
+      if (accountType === "OWNER") router.replace("/owner");
+      else router.replace("/(tabs)/profile");
     } catch (e: any) {
       setError(e?.message || "Signup failed");
     } finally {
@@ -35,6 +37,23 @@ export default function SignupScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.label}>I am…</Text>
+      <View style={styles.row}>
+        <Pressable
+          style={[styles.chip, accountType === "USER" && styles.chipOn]}
+          onPress={() => setAccountType("USER")}
+        >
+          <Text style={[styles.chipTitle, accountType === "USER" && styles.chipTitleOn]}>Explorer</Text>
+          <Text style={[styles.chipSub, accountType === "USER" && styles.chipSubOn]}>Free</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.chip, accountType === "OWNER" && styles.chipOn]}
+          onPress={() => setAccountType("OWNER")}
+        >
+          <Text style={[styles.chipTitle, accountType === "OWNER" && styles.chipTitleOn]}>Café owner</Text>
+          <Text style={[styles.chipSub, accountType === "OWNER" && styles.chipSubOn]}>₹100 unlock</Text>
+        </Pressable>
+      </View>
       <TextInput
         style={styles.input}
         placeholder="Display name"
@@ -69,6 +88,21 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream, padding: 20, gap: 12 },
+  label: { fontSize: 13, fontWeight: "600", color: colors.warm600 },
+  row: { flexDirection: "row", gap: 8 },
+  chip: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.warm200,
+    backgroundColor: colors.white,
+    padding: 12,
+  },
+  chipOn: { backgroundColor: colors.warm700, borderColor: colors.warm700 },
+  chipTitle: { fontSize: 14, fontWeight: "700", color: colors.warm700 },
+  chipTitleOn: { color: colors.cream },
+  chipSub: { marginTop: 4, fontSize: 11, color: colors.warm400 },
+  chipSubOn: { color: "rgba(255,255,255,0.8)" },
   input: {
     backgroundColor: colors.white,
     borderRadius: 12,
@@ -79,12 +113,12 @@ const styles = StyleSheet.create({
     color: colors.warm700,
   },
   button: {
-    backgroundColor: colors.warm700,
-    borderRadius: 20,
-    paddingVertical: 12,
-    alignItems: "center",
     marginTop: 8,
+    backgroundColor: colors.warm700,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
   },
   buttonText: { color: colors.cream, fontWeight: "700" },
-  error: { color: colors.accent },
+  error: { color: "#c45c4a", fontSize: 13 },
 });

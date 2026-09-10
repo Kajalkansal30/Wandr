@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Store, Clock, CheckCircle, XCircle, Edit, Heart, BarChart3, Rocket, Navigation, Phone, Share2, Eye, Shield, AlertTriangle, Ban } from "lucide-react";
+import { Plus, Store, Clock, CheckCircle, XCircle, Edit, Heart, BarChart3, Rocket, Navigation, Phone, Share2, Eye, Shield, AlertTriangle, Ban, MessageSquare } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchMyPlaces } from "../../api/owner";
 import { fetchOwnerAnalytics, fetchMyBoosts } from "../../api/ownerAnalytics";
+import { fetchListingFeeStatus, unlockListingFee } from "../../api/billing";
+import { fetchReviews } from "../../api/places";
 import { FunnelChart, MetricBars, Sparkline, SourcePieList } from "../../components/owner/AnalyticsCharts";
 import { api } from "../../api/client";
 import OwnerTopBar from "../../components/OwnerTopBar";
@@ -29,6 +31,9 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [cafes, setCafes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [feePaid, setFeePaid] = useState(null);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState("");
   const tab = searchParams.get("tab") || "cafes";
   const setActiveTab = (id) => setSearchParams(id === "cafes" ? {} : { tab: id });
 
@@ -38,6 +43,8 @@ export default function DashboardPage() {
   const [boosts, setBoosts] = useState([]);
   const [trust, setTrust] = useState(null);
   const [trustPlaceId, setTrustPlaceId] = useState(null);
+  const [hubReviews, setHubReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const justRegistered = searchParams.get("registered") === "1";
 
   useEffect(() => {
@@ -48,14 +55,33 @@ export default function DashboardPage() {
         return;
       }
       try {
-        setCafes(await fetchMyPlaces());
+        const [places, billing] = await Promise.all([
+          fetchMyPlaces(),
+          fetchListingFeeStatus().catch(() => ({ listingFeePaid: false })),
+        ]);
+        setCafes(places);
+        setFeePaid(Boolean(billing.listingFeePaid));
       } catch {
         setCafes([]);
+        setFeePaid(false);
       }
       setLoading(false);
     }
     fetchMyCafes();
   }, [user]);
+
+  async function handleUnlock() {
+    setPayError("");
+    setPayBusy(true);
+    try {
+      await unlockListingFee({ name: user?.displayName, email: user?.email });
+      setFeePaid(true);
+    } catch (err) {
+      setPayError(err.message || "Payment failed");
+    } finally {
+      setPayBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!user || (tab !== "analytics" && tab !== "cafes")) return;
@@ -82,6 +108,35 @@ export default function DashboardPage() {
       .then(setBoosts)
       .catch(() => setBoosts([]));
   }, [user, tab]);
+
+  useEffect(() => {
+    if (!user || tab !== "reviews" || cafes.length === 0) {
+      if (tab === "reviews" && cafes.length === 0) setHubReviews([]);
+      return;
+    }
+    let cancelled = false;
+    setReviewsLoading(true);
+    Promise.all(
+      cafes.slice(0, 20).map(async (c) => {
+        try {
+          const list = await fetchReviews(c.id);
+          return (list || []).map((r) => ({ ...r, placeName: c.name, placeId: c.id }));
+        } catch {
+          return [];
+        }
+      })
+    )
+      .then((chunks) => {
+        if (cancelled) return;
+        setHubReviews(chunks.flat().sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))));
+      })
+      .finally(() => {
+        if (!cancelled) setReviewsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, tab, cafes]);
 
   const approved = cafes.filter((c) => c.status === "approved" || c.status === "APPROVED");
   const totalSaves = approved.reduce((sum, c) => sum + (c.savedCount || 0), 0);
@@ -150,14 +205,40 @@ export default function DashboardPage() {
             Discovery that measures interest — not vanity metrics
           </p>
         </div>
-        <Link
-          to="/owner/register-cafe"
-          className="inline-flex items-center gap-1.5 rounded-full bg-warm-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-terracotta-500"
-        >
-          <Plus size={18} />
-          <span className="hidden sm:inline">Add listing</span>
-        </Link>
+        {feePaid ? (
+          <Link
+            to="/owner/register-cafe"
+            className="inline-flex items-center gap-1.5 rounded-full bg-warm-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-terracotta-500"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">Add listing</span>
+          </Link>
+        ) : null}
       </div>
+
+      {feePaid === false && (
+        <div className="mb-8 rounded-2xl border border-warm-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-warm-700" style={{ fontFamily: "var(--font-display)" }}>
+            Unlock Business Hub — ₹100 once
+          </h3>
+          <p className="mt-2 text-sm text-warm-500">
+            Pay once to list unlimited cafés. Each listing goes live after business phone OTP — no admin wait.
+          </p>
+          {payError && (
+            <p className="mt-3 rounded-lg border border-terracotta-100 bg-terracotta-50 px-3 py-2 text-sm text-terracotta-500">
+              {payError}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={payBusy}
+            onClick={handleUnlock}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-warm-700 px-5 py-3 text-sm font-semibold text-cream transition hover:bg-terracotta-500 disabled:opacity-60"
+          >
+            {payBusy ? "Opening checkout…" : "Pay ₹100 & unlock"}
+          </button>
+        </div>
+      )}
 
       {approved.length > 0 && (
         <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -171,7 +252,7 @@ export default function DashboardPage() {
       <div className="mb-6 flex gap-1 rounded-xl bg-warm-100 p-1">
         {[
           { id: "cafes", label: "Listings", icon: Store },
-          { id: "trust", label: "Trust", icon: Shield },
+          { id: "reviews", label: "Reviews", icon: MessageSquare },
           { id: "analytics", label: "Analytics", icon: BarChart3 },
           { id: "promote", label: "Promote", icon: Rocket },
         ].map((t) => {
@@ -197,7 +278,7 @@ export default function DashboardPage() {
             <div className="mb-4 rounded-xl border border-sage-200 bg-sage-50 px-4 py-3 text-center">
               <p className="text-sm font-semibold text-sage-600">
                 <CheckCircle size={14} className="mr-1.5 inline -mt-0.5" />
-                Place submitted! It's now waiting for admin approval.
+                Café is live on discovery.
               </p>
             </div>
           )}
@@ -208,14 +289,27 @@ export default function DashboardPage() {
               </div>
               <h3 className="mb-1 text-lg font-semibold text-warm-600">No cafes registered</h3>
               <p className="mb-6 max-w-[260px] text-sm text-warm-400">
-                List your cafe on wandr and reach new customers
+                {feePaid
+                  ? "List your cafe on wandr and reach new customers"
+                  : "Unlock Business Hub with ₹100, then add your first café"}
               </p>
-              <Link
-                to="/owner/register-cafe"
-                className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-terracotta-500"
-              >
-                <Plus size={18} /> Register Your Cafe
-              </Link>
+              {feePaid ? (
+                <Link
+                  to="/owner/register-cafe"
+                  className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-terracotta-500"
+                >
+                  <Plus size={18} /> Register Your Cafe
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={payBusy}
+                  onClick={handleUnlock}
+                  className="inline-flex items-center gap-2 rounded-xl bg-warm-600 px-6 py-3 font-semibold text-white transition hover:bg-terracotta-500 disabled:opacity-60"
+                >
+                  Pay ₹100 & unlock
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -255,7 +349,7 @@ export default function DashboardPage() {
                         )}
                       </div>
                       {isPending ? (
-                        <p className="mt-0.5 text-xs text-gold-500">Waiting for admin approval · tap to edit</p>
+                        <p className="mt-0.5 text-xs text-gold-500">Not live yet · tap to edit</p>
                       ) : (
                         <p className="mt-0.5 text-xs text-warm-400">
                           Tap to edit · {cafe.city || cafe.address || "—"} · {cafe.savedCount || 0} saves
@@ -269,6 +363,38 @@ export default function DashboardPage() {
             </div>
           )}
         </>
+      )}
+
+      {tab === "reviews" && (
+        <div className="space-y-4">
+          <p className="text-sm text-warm-400">
+            Reviews on your listings are read-only here — you cannot edit someone else&apos;s review.
+          </p>
+          {reviewsLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-warm-200 border-t-warm-500" />
+            </div>
+          ) : hubReviews.length === 0 ? (
+            <p className="py-10 text-center text-sm text-warm-400">No reviews on your listings yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {hubReviews.map((r) => (
+                <Link
+                  key={`${r.placeId}-${r.id}`}
+                  to={`/cafe/${r.placeId}`}
+                  className="block rounded-xl border border-warm-100 bg-white p-4 transition hover:border-warm-200"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-warm-700">{r.placeName}</p>
+                    <p className="text-xs font-semibold text-gold-500">★ {r.rating ?? "—"}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-warm-400">{r.authorName || r.displayName || "Guest"}</p>
+                  <p className="mt-2 text-sm text-warm-600 line-clamp-3">{r.text || r.body || r.comment || ""}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {tab === "trust" && (

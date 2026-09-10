@@ -15,7 +15,7 @@ export default function DeleteAccountScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.warn}>
-        This permanently deletes your account, favorites, and related data. Reviews stay anonymized.
+        This permanently deletes your account, favorites, reviews, and related data.
       </Text>
       <TextInput
         style={styles.input}

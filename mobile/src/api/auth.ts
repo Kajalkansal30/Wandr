@@ -8,6 +8,7 @@ export type AuthSession = {
   displayName: string;
   role: string;
   emailVerified: boolean;
+  listingFeePaid?: boolean;
 };
 
 export async function login(email: string, password: string): Promise<AuthSession> {
@@ -23,11 +24,13 @@ export async function login(email: string, password: string): Promise<AuthSessio
 export async function signup(
   email: string,
   password: string,
-  displayName: string
+  displayName: string,
+  role: "USER" | "OWNER" = "USER"
 ): Promise<AuthSession> {
+  const accountRole = role === "OWNER" ? "OWNER" : "USER";
   const data = await api("/api/auth/signup", {
     method: "POST",
-    body: { email, password, displayName, role: "USER" },
+    body: { email, password, displayName, role: accountRole },
     timeoutMs: 20000,
   });
   await setTokens(data.token, data.refreshToken);

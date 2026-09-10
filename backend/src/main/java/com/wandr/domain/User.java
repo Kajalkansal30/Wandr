@@ -43,6 +43,14 @@ public class User {
 
   private Instant passwordResetExpiresAt;
 
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean listingFeePaid = false;
+
+  private Instant listingFeePaidAt;
+
+  private String razorpayPaymentId;
+
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
 
@@ -50,5 +58,6 @@ public class User {
   void onCreate() {
     if (createdAt == null) createdAt = Instant.now();
     if (!emailVerified) emailVerified = false;
+    if (!listingFeePaid) listingFeePaid = false;
   }
 }

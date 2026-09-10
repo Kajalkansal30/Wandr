@@ -202,6 +202,15 @@ public class PlaceController {
       @PathVariable Long id,
       @RequestBody MediaDtos.CreateRequest body
   ) {
-    return mediaService.submit(user, id, body, false);
+    boolean ownerUpload = false;
+    if (user != null) {
+      try {
+        placeService.requireOwned(user, id);
+        ownerUpload = true;
+      } catch (Exception ignored) {
+        ownerUpload = false;
+      }
+    }
+    return mediaService.submit(user, id, body, ownerUpload);
   }
 }

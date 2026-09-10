@@ -8,7 +8,6 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { usePlaces } from "../contexts/PlacesContext";
 import { fetchPlace, confirmPlaceInfo } from "../api/places";
-import ClaimVerificationPanel from "../components/ClaimVerificationPanel";
 import Badge from "../components/Badge";
 import ReviewSection from "../components/ReviewSection";
 import MenuSection from "../components/MenuSection";
@@ -176,9 +175,12 @@ export default function CafeDetailPage() {
     (role === "owner" || role === "admin") &&
     cafe.ownerId != null &&
     String(cafe.ownerId) === String(user.uid);
-  const canClaim = !isOwnListing && (cafe.ownershipStatus === "UNCLAIMED" || cafe.ownershipStatus === "CLAIM_PENDING");
-  const canRequestAccess = !isOwnListing && (cafe.ownershipStatus === "OWNER_CLAIMED" || cafe.ownershipStatus === "OWNER_VERIFIED");
-  const canUpgradeVerification = isOwnListing && cafe.ownershipStatus !== "OWNER_VERIFIED";
+  const isCommunityListing =
+    !isOwnListing &&
+    (cafe.ownershipStatus === "UNCLAIMED" || cafe.ownershipStatus === "CLAIM_PENDING");
+  const isManagedListing =
+    !isOwnListing &&
+    (cafe.ownershipStatus === "OWNER_CLAIMED" || cafe.ownershipStatus === "OWNER_VERIFIED");
   const toneClass =
     openInfo?.tone === "good"
       ? "text-sage-500"
@@ -527,31 +529,27 @@ export default function CafeDetailPage() {
               </button>
             )}
 
-            {canClaim && (
+            {isCommunityListing && (
               <div className="rounded-xl border border-dashed border-warm-200 bg-warm-50 p-4">
-                <p className="text-sm font-semibold text-warm-700">
-                  {cafe.ownershipStatus === "CLAIM_PENDING" ? "Claim pending" : "Community Added · Not claimed"}
-                </p>
+                <p className="text-sm font-semibold text-warm-700">Community added · not an owner listing</p>
                 <p className="mt-1 text-xs text-warm-400">
-                  Adding a place is not the same as owning it. Claim only if you are authorized to manage this business.
+                  Are you the owner? Sign up as a Café owner and add your listing in Business Hub after the ₹100 unlock.
                 </p>
-                <ClaimVerificationPanel placeId={cafe.id} onComplete={setCafe} />
+                <Link
+                  to="/signup?as=owner&next=/owner/dashboard"
+                  className="mt-3 inline-flex text-sm font-semibold text-warm-700 underline"
+                >
+                  Sign up as Café owner
+                </Link>
               </div>
             )}
 
-            {canRequestAccess && (
+            {isManagedListing && (
               <div className="rounded-xl border border-warm-200 bg-white p-4">
-                <p className="text-sm font-semibold text-warm-700">This business is already managed</p>
-                <p className="mt-1 text-xs text-warm-400">Request access from the current manager, or open an ownership dispute for admin review.</p>
-                <ClaimVerificationPanel placeId={cafe.id} mode="managed" onComplete={setCafe} />
-              </div>
-            )}
-
-            {canUpgradeVerification && (
-              <div className="rounded-xl border border-sage-200 bg-sage-50/40 p-4">
-                <p className="text-sm font-semibold text-warm-700">Complete verification</p>
-                <p className="mt-1 text-xs text-warm-400">Finish phone, domain, email, or submit video/docs for a Verified business badge.</p>
-                <ClaimVerificationPanel placeId={cafe.id} mode="upgrade" initialOpen onComplete={setCafe} />
+                <p className="text-sm font-semibold text-warm-700">Managed by the business</p>
+                <p className="mt-1 text-xs text-warm-400">
+                  This listing is claimed by an owner account. Wandr does not offer access disputes here.
+                </p>
               </div>
             )}
 

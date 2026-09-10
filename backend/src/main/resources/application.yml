@@ -41,6 +41,13 @@ wandr:
     resend-api-key: ${RESEND_API_KEY:}
   sms:
     provider: ${WANDR_SMS_PROVIDER:log}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+  billing:
+    listing-fee-paise: ${WANDR_LISTING_FEE_PAISE:10000}
+    # When Razorpay keys are empty, allow simulated unlock (local/dev only)
+    allow-mock-when-unconfigured: ${WANDR_BILLING_ALLOW_MOCK:true}
 
 logging:
   level:

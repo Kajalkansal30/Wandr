@@ -30,10 +30,11 @@ public class AuthDtos {
       String displayName,
       String role,
       boolean emailVerified,
-      String refreshToken
+      String refreshToken,
+      boolean listingFeePaid
   ) {
     public AuthResponse withoutRefresh() {
-      return new AuthResponse(token, userId, email, displayName, role, emailVerified, null);
+      return new AuthResponse(token, userId, email, displayName, role, emailVerified, null, listingFeePaid);
     }
   }
 

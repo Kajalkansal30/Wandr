@@ -312,8 +312,7 @@ export default function ProfilePage() {
           <Trash2 size={16} /> Delete my account
         </h2>
         <p className="mb-3 text-xs text-warm-500">
-          Permanently removes your profile, saves, and claims. Owned listings are closed and hidden.
-          Reviews stay anonymized as “Deleted user.”
+          Permanently removes your profile, saves, claims, and reviews. Owned listings are closed and hidden.
         </p>
         {!deleteOpen ? (
           <button

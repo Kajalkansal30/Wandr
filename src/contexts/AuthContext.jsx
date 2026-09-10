@@ -44,8 +44,8 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  async function signup(email, password, displayName) {
-    const result = await signupRequest(email, password, displayName);
+  async function signup(email, password, displayName, accountRole = "USER") {
+    const result = await signupRequest(email, password, displayName, accountRole);
     setUser(result.user);
     setRole(result.role);
     saveSession(result.user, result.role);

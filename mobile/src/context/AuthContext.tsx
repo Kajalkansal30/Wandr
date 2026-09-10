@@ -11,15 +11,17 @@ type User = {
   displayName: string;
   role: string;
   emailVerified: boolean;
+  listingFeePaid?: boolean;
 };
 
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, displayName: string) => Promise<void>;
+  signup: (email: string, password: string, displayName: string, role?: "USER" | "OWNER") => Promise<void>;
   signOut: () => Promise<void>;
   markEmailVerified: () => Promise<void>;
+  setListingFeePaid: (paid: boolean) => Promise<void>;
   isOwner: boolean;
 };
 
@@ -127,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       displayName: session.displayName,
       role: String(session.role || "USER").toUpperCase(),
       emailVerified: session.emailVerified,
+      listingFeePaid: Boolean(session.listingFeePaid),
     };
     setUser(next);
     await persistUser(next);
@@ -141,8 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signup = useCallback(
-    async (email: string, password: string, displayName: string) => {
-      const session = await authApi.signup(email, password, displayName);
+    async (email: string, password: string, displayName: string, role: "USER" | "OWNER" = "USER") => {
+      const session = await authApi.signup(email, password, displayName, role);
       await applySession(session);
     },
     [applySession]
@@ -163,6 +166,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const setListingFeePaid = useCallback(async (paid: boolean) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, listingFeePaid: paid };
+      void persistUser(next);
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -171,9 +183,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signup,
       signOut,
       markEmailVerified,
+      setListingFeePaid,
       isOwner: user?.role === "OWNER" || user?.role === "ADMIN",
     }),
-    [user, loading, login, signup, signOut, markEmailVerified]
+    [user, loading, login, signup, signOut, markEmailVerified, setListingFeePaid]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -28,3 +28,19 @@ export async function updatePlace(id, body) {
   });
   return mapPlace(data);
 }
+
+export async function startListingPhoneOtp(placeId, phone) {
+  return api(`/api/owner/places/${placeId}/phone/otp`, {
+    method: "POST",
+    auth: true,
+    body: phone ? { phone } : {},
+  });
+}
+
+export async function verifyListingPhoneOtp(placeId, code) {
+  return api(`/api/owner/places/${placeId}/phone/verify`, {
+    method: "POST",
+    auth: true,
+    body: { code },
+  });
+}

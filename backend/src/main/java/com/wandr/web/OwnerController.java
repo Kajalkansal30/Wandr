@@ -19,6 +19,8 @@ public class OwnerController {
   private final OwnerAnalyticsService ownerAnalyticsService;
   private final BoostService boostService;
   private final ClaimService claimService;
+  private final PaymentService paymentService;
+  private final OwnerListingVerificationService ownerListingVerificationService;
 
   @GetMapping("/places")
   public List<PlaceDtos.PlaceResponse> myPlaces(@AuthenticationPrincipal User user) {
@@ -38,6 +40,7 @@ public class OwnerController {
       @AuthenticationPrincipal User user,
       @RequestBody PlaceDtos.PlaceUpsertRequest body
   ) {
+    paymentService.requireListingFeePaid(user);
     return placeService.create(user, body);
   }
 
@@ -112,5 +115,26 @@ public class OwnerController {
   @GetMapping("/claims")
   public List<ClaimDtos.ClaimResponse> myClaims(@AuthenticationPrincipal User user) {
     return claimService.listMine(user);
+  }
+
+  @PostMapping("/places/{id}/phone/otp")
+  public Map<String, Object> startListingPhoneOtp(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long id,
+      @RequestBody(required = false) Map<String, String> body
+  ) {
+    String phone = body == null ? null : body.get("phone");
+    return ownerListingVerificationService.startPhoneOtp(user, id, phone);
+  }
+
+  @PostMapping("/places/{id}/phone/verify")
+  public Map<String, Object> verifyListingPhoneOtp(
+      @AuthenticationPrincipal User user,
+      @PathVariable Long id,
+      @RequestBody Map<String, String> body
+  ) {
+    return ownerListingVerificationService.verifyPhoneOtp(
+        user, id, body == null ? null : body.get("code")
+    );
   }
 }

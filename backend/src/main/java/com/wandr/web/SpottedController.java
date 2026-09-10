@@ -23,9 +23,10 @@ public class SpottedController {
       @RequestParam(required = false) Double lat,
       @RequestParam(required = false) Double lng,
       @RequestParam(required = false, defaultValue = "all") String filter,
-      @RequestParam(required = false) Integer limit
+      @RequestParam(required = false) Integer limit,
+      @RequestParam(required = false) String prefs
   ) {
-    return spottedService.feed(user, lat, lng, filter, limit);
+    return spottedService.feed(user, lat, lng, filter, limit, prefs);
   }
 
   @PostMapping("/api/spotted")

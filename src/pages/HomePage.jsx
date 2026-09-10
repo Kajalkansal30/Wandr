@@ -11,7 +11,11 @@ import MapView from "../components/MapView";
 import ExploreAnywhereSheet from "../components/ExploreAnywhereSheet";
 import { filterByDiscovery, newPlaces, risingPlaces, hiddenPlaces } from "../utils/discovery";
 import { applySearchFilters } from "../utils/searchParser";
-import { getRecommendations, recommendationReason } from "../utils/recommendations";
+import {
+  getRecommendations,
+  recommendationReason,
+  canShowPersonalized,
+} from "../utils/recommendations";
 import { loadSavedIds } from "../utils/favorites";
 import {
   loadExploreArea,
@@ -24,6 +28,9 @@ import {
   loadTastePrefs,
   toggleTastePref,
   PICKED_FOR_YOU_MIN_SAVES,
+  PICKED_FOR_YOU_MIN_PREFS,
+  recordTasteSignals,
+  tokenizeTasteText,
 } from "../utils/preferences";
 import { trackEvent } from "../api/analytics";
 import { injectSponsoredSlot } from "../utils/sponsored";
@@ -87,14 +94,17 @@ export default function HomePage() {
   }, [user]);
 
   const cafes = useMemo(() => filterByArea(allPlaces, area), [allPlaces, area]);
-  const canPersonalize = savedIds.length >= PICKED_FOR_YOU_MIN_SAVES;
+  const canPersonalize = canShowPersonalized(savedIds.length, tastePrefs);
   const forYou = useMemo(
-    () => (canPersonalize ? getRecommendations(cafes, savedIds, 3) : []),
-    [cafes, savedIds, canPersonalize]
+    () =>
+      canPersonalize
+        ? getRecommendations(cafes, savedIds, 3, { tastePrefIds: tastePrefs })
+        : [],
+    [cafes, savedIds, tastePrefs, canPersonalize]
   );
   const forYouReason = useMemo(
-    () => (canPersonalize ? recommendationReason(cafes, savedIds) : ""),
-    [cafes, savedIds, canPersonalize]
+    () => (canPersonalize ? recommendationReason(cafes, savedIds, tastePrefs) : ""),
+    [cafes, savedIds, tastePrefs, canPersonalize]
   );
 
   const searchParsed = useMemo(() => {
@@ -147,6 +157,7 @@ export default function HomePage() {
     if (!search.trim()) return;
     const t = setTimeout(() => {
       trackEvent("search", { source: "home", metadata: { q: search.slice(0, 120) } });
+      recordTasteSignals(tokenizeTasteText(search), 2);
     }, 600);
     return () => clearTimeout(t);
   }, [search]);
@@ -284,7 +295,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => newSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
-                    className="discover-hero__reveal discover-hero__reveal--4 mt-4 inline-flex items-center gap-2 text-sm font-semibold text-warm-700 transition hover:text-[#EF6F61]"
+                    className="discover-hero__explore discover-hero__reveal discover-hero__reveal--4 mt-4 inline-flex items-center gap-2 text-sm font-semibold text-warm-700 transition hover:text-[#EF6F61]"
                   >
                     Explore nearby <ArrowRight size={14} />
                   </button>
@@ -566,7 +577,7 @@ export default function HomePage() {
               </div>
             </section>
 
-            {canPersonalize && forYou.length > 0 ? (
+            {canPersonalize && forYou.length > 0 && (
               <DiscoverySection title="Picked for you" subtitle={forYouReason}>
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {forYou.map((cafe, i) => (
@@ -574,45 +585,47 @@ export default function HomePage() {
                   ))}
                 </div>
               </DiscoverySection>
-            ) : !canPersonalize ? (
-              <section className="section-gap">
-                <h2
-                  className="mb-2 text-lg font-bold text-warm-700 md:text-xl"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  Tell us what you like
-                </h2>
-                <p className="mb-4 text-sm text-warm-400">
-                  Pick a few vibes so Wandr can personalize later — Picked for you unlocks after {PICKED_FOR_YOU_MIN_SAVES}+ saves.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {TASTE_BOOTSTRAP.map((pref) => {
-                    const on = tastePrefs.includes(pref.id);
-                    return (
-                      <button
-                        key={pref.id}
-                        type="button"
-                        onClick={() => {
-                          const next = toggleTastePref(pref.id);
-                          setTastePrefs(next);
-                          trackEvent("taste_pref", {
-                            source: "home_bootstrap",
-                            metadata: { id: pref.id, on: next.includes(pref.id) },
-                          });
-                        }}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                          on
-                            ? "bg-warm-700 text-cream"
-                            : "border border-warm-200 bg-white text-warm-700 hover:border-warm-400"
-                        }`}
-                      >
-                        {pref.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            ) : null}
+            )}
+
+            <section className="section-gap">
+              <h2
+                className="mb-2 text-lg font-bold text-warm-700 md:text-xl"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {canPersonalize ? "Tune your vibe" : "Tell us what you like"}
+              </h2>
+              <p className="mb-4 text-sm text-warm-400">
+                {canPersonalize
+                  ? "Update chips anytime — listings and Spotted adapt to your taste, area, and time of day."
+                  : `Pick ${PICKED_FOR_YOU_MIN_PREFS}+ vibes to unlock Picked for you now, or save ${PICKED_FOR_YOU_MIN_SAVES}+ places.`}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {TASTE_BOOTSTRAP.map((pref) => {
+                  const on = tastePrefs.includes(pref.id);
+                  return (
+                    <button
+                      key={pref.id}
+                      type="button"
+                      onClick={() => {
+                        const next = toggleTastePref(pref.id);
+                        setTastePrefs(next);
+                        trackEvent("taste_pref", {
+                          source: "home_bootstrap",
+                          metadata: { id: pref.id, on: next.includes(pref.id) },
+                        });
+                      }}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        on
+                          ? "bg-warm-700 text-cream"
+                          : "border border-warm-200 bg-white text-warm-700 hover:border-warm-400"
+                      }`}
+                    >
+                      {pref.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           </div>
         )}
         </div>

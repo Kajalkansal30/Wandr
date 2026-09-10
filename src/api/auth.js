@@ -13,9 +13,11 @@ function toSession(data) {
       email: data.email,
       displayName: data.displayName,
       emailVerified: Boolean(data.emailVerified),
+      listingFeePaid: Boolean(data.listingFeePaid),
     },
     role: normalizeRole(data.role),
     emailVerified: Boolean(data.emailVerified),
+    listingFeePaid: Boolean(data.listingFeePaid),
   };
 }
 
@@ -28,14 +30,15 @@ export async function loginRequest(email, password) {
   return toSession(data);
 }
 
-export async function signupRequest(email, password, displayName) {
+export async function signupRequest(email, password, displayName, role = "USER") {
+  const accountRole = String(role || "USER").toUpperCase() === "OWNER" ? "OWNER" : "USER";
   const data = await api("/api/auth/signup", {
     method: "POST",
     body: {
       email,
       password,
       displayName,
-      role: "USER",
+      role: accountRole,
     },
     timeoutMs: 20000,
   });

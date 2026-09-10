@@ -46,19 +46,28 @@ export function mapSpot(s) {
   };
 }
 
-export async function fetchSpottedFeed({ lat, lng, filter = "all", limit } = {}) {
+export async function fetchSpottedFeed({ lat, lng, filter = "all", limit, prefs } = {}) {
   try {
     const params = new URLSearchParams();
     if (lat != null) params.set("lat", String(lat));
     if (lng != null) params.set("lng", String(lng));
     if (filter) params.set("filter", filter);
     if (limit != null) params.set("limit", String(limit));
+    if (prefs != null && prefs !== "") {
+      const prefStr = Array.isArray(prefs) ? prefs.join(",") : String(prefs);
+      if (prefStr.trim()) params.set("prefs", prefStr.trim());
+    }
     const q = params.toString();
     const data = await api(`/api/spotted/feed${q ? `?${q}` : ""}`, {
       auth: Boolean(getToken()),
       timeoutMs: 15000,
     });
-    return (data || []).map(mapSpot);
+    const list = (data || []).map(mapSpot).filter(Boolean);
+    // Empty DB / fresh env — show playable café demo reels so Spotted isn't blank
+    if (list.length === 0) {
+      return getDemoSpots({ filter, lat, lng });
+    }
+    return list;
   } catch (err) {
     if (import.meta.env.DEV) {
       console.warn("Spotted feed API failed, using demo spots (dev only):", err.message);

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Loader, AlertCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import { createPlace } from "../../api/owner";
+import { createPlace, startListingPhoneOtp, verifyListingPhoneOtp } from "../../api/owner";
+import { fetchListingFeeStatus } from "../../api/billing";
 import MapPinPicker from "../../components/MapPinPicker";
 import OwnerTopBar from "../../components/OwnerTopBar";
 import { isCloudinaryUploadAvailable, uploadPlaceCover } from "../../utils/uploadSpot";
@@ -30,7 +31,7 @@ const allTags = [
   "Rustic", "Quiet", "Warm", "Artsy", "Peaceful", "Green", "Rooftop", "Pet Friendly",
 ];
 
-const STEPS = ["What are you?", "Get discovered", "Make it beautiful", "Go live"];
+const STEPS = ["What are you?", "Get discovered", "Details & media", "Phone OTP"];
 
 function FieldError({ message }) {
   if (!message) return null;
@@ -49,6 +50,9 @@ export default function RegisterCafePage() {
   const [uploadPct, setUploadPct] = useState(null);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpHint, setOtpHint] = useState("");
+  const [createdPlaceId, setCreatedPlaceId] = useState(null);
   const canUpload = isCloudinaryUploadAvailable();
   const [form, setForm] = useState({
     locationType: "",
@@ -73,6 +77,14 @@ export default function RegisterCafePage() {
     avgCostForTwo: "",
   });
 
+  useEffect(() => {
+    fetchListingFeeStatus()
+      .then((s) => {
+        if (!s.listingFeePaid) navigate("/owner/dashboard", { replace: true });
+      })
+      .catch(() => navigate("/owner/dashboard", { replace: true }));
+  }, [navigate]);
+
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -87,58 +99,41 @@ export default function RegisterCafePage() {
   function toggleTag(tag) {
     setForm((prev) => ({
       ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter((t) => t !== tag)
-        : prev.tags.length < 4
-          ? [...prev.tags, tag]
-          : prev.tags,
+      tags: prev.tags.includes(tag) ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag],
     }));
   }
-
-  const isMobile = ["FOOD_TRUCK", "POP_UP", "STREET_FOOD"].includes(form.locationType);
-  const isHome = ["HOME_BAKERY", "HOME_KITCHEN"].includes(form.locationType);
 
   function validateStep(s) {
     const e = {};
     if (s === 0) {
-      if (!form.locationType) e.locationType = "Choose what type of place you are";
+      if (!form.locationType) e.locationType = "Pick a type";
+      if (!form.name.trim()) e.name = "Name is required";
+      if (!form.category) e.category = "Category is required";
     }
     if (s === 1) {
-      if (!form.name.trim()) e.name = "Name is required";
-      if (!form.category) e.category = "Pick a category";
-      if (!form.phone.trim()) e.phone = "Phone number is required";
+      if (!form.address.trim()) e.address = "Address is required";
       if (!form.city.trim()) e.city = "City is required";
-      if (isMobile) {
-        if (!form.serviceArea.trim()) e.serviceArea = "Tell people where you operate";
-      } else {
-        if (!form.address.trim()) e.address = "Address is required";
-      }
+      if (form.lat == null || form.lng == null) e.lat = "Drop a map pin";
+      if (!form.phone.trim()) e.phone = "Business phone is required for OTP";
     }
     if (s === 2) {
       if (!form.description.trim() && form.tags.length === 0) {
-        e.description = "Add a description or pick at least one vibe tag";
+        e.description = "Add a description or at least one vibe tag";
       }
     }
     return e;
   }
 
-  function tryAdvance() {
+  function nextStep() {
+    const e = validateStep(step);
     setTouched(true);
-    const stepErrors = validateStep(step);
-    setErrors(stepErrors);
-    if (Object.keys(stepErrors).length > 0) return;
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
     setTouched(false);
     setStep(step + 1);
   }
 
-  function canSubmit() {
-    for (let s = 0; s <= 2; s++) {
-      if (Object.keys(validateStep(s)).length > 0) return false;
-    }
-    return true;
-  }
-
-  async function handleSubmit() {
+  async function createAndSendOtp() {
     if (!user || submitting) return;
     const allErrors = { ...validateStep(0), ...validateStep(1), ...validateStep(2) };
     if (Object.keys(allErrors).length > 0) {
@@ -147,31 +142,55 @@ export default function RegisterCafePage() {
     }
     setSubmitting(true);
     try {
-      await createPlace({
-        name: form.name,
-        category: form.category,
-        locationType: form.locationType,
-        description: form.description,
-        priceLevel: form.priceLevel,
-        address: form.address,
-        city: form.city,
-        serviceArea: form.serviceArea || undefined,
-        exactAddressPrivate: form.exactAddressPrivate || undefined,
-        lat: form.lat,
-        lng: form.lng,
-        image: form.imageUrl || undefined,
-        tags: form.tags,
-        phone: form.phone,
-        whatsapp: form.whatsapp || undefined,
-        website: form.website || undefined,
-        instagram: form.instagram,
-        hours: form.hours,
-        bestFor: form.bestFor,
-        avgCostForTwo: form.avgCostForTwo ? Number(form.avgCostForTwo) : null,
-      });
-      navigate("/owner/dashboard?registered=1");
+      let placeId = createdPlaceId;
+      if (!placeId) {
+        const place = await createPlace({
+          name: form.name,
+          category: form.category,
+          locationType: form.locationType,
+          description: form.description,
+          priceLevel: form.priceLevel,
+          address: form.address,
+          city: form.city,
+          serviceArea: form.serviceArea || undefined,
+          exactAddressPrivate: form.exactAddressPrivate || undefined,
+          lat: form.lat,
+          lng: form.lng,
+          image: form.imageUrl || undefined,
+          tags: form.tags,
+          phone: form.phone,
+          whatsapp: form.whatsapp || undefined,
+          website: form.website || undefined,
+          instagram: form.instagram,
+          hours: form.hours,
+          bestFor: form.bestFor,
+          avgCostForTwo: form.avgCostForTwo ? Number(form.avgCostForTwo) : null,
+        });
+        placeId = place.id;
+        setCreatedPlaceId(placeId);
+      }
+      const sent = await startListingPhoneOtp(placeId, form.phone);
+      setOtpHint(sent.phone ? `Code sent to ${sent.phone}` : "OTP sent to your business phone");
+      setStep(3);
     } catch (err) {
       alert(err.message || "Failed to submit. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    if (!createdPlaceId || submitting) return;
+    if (!otpCode.trim()) {
+      setErrors({ otp: "Enter the OTP" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await verifyListingPhoneOtp(createdPlaceId, otpCode.trim());
+      navigate("/owner/dashboard?registered=1");
+    } catch (err) {
+      setErrors({ otp: err.message || "Invalid OTP" });
     } finally {
       setSubmitting(false);
     }
@@ -192,7 +211,7 @@ export default function RegisterCafePage() {
         Get discovered
       </h1>
       <p className="mb-6 text-sm text-warm-400">
-        Put your place in front of people looking for somewhere new. Verification ≠ paid promotion.
+        Fill details, verify your business phone with OTP, and go live — no admin wait.
       </p>
 
       <div className="mb-8 flex gap-1.5">
@@ -207,91 +226,76 @@ export default function RegisterCafePage() {
       {step === 0 && (
         <div>
           <p className="mb-3 text-sm font-medium text-warm-600">What are you?</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {LOCATION_TYPES.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => update("locationType", t.id)}
-                className={`rounded-xl px-2 py-3 text-center text-xs font-semibold ${
-                  form.locationType === t.id ? "bg-warm-600 text-white" : "border border-warm-200 bg-transparent text-warm-600"
+                className={`rounded-xl border px-3 py-3 text-sm font-semibold ${
+                  form.locationType === t.id ? "border-warm-600 bg-warm-600 text-white" : "border-warm-100 bg-white text-warm-600"
                 }`}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          {touched && <FieldError message={errors.locationType} />}
+          <FieldError message={touched ? errors.locationType : ""} />
+          <label className="mb-1.5 mt-4 block text-sm font-medium text-warm-600">Name</label>
+          <input
+            value={form.name}
+            onChange={(e) => update("name", e.target.value)}
+            className={`mb-1 w-full rounded-xl border bg-white px-4 py-3 ${errors.name ? "border-terracotta-400" : "border-warm-100"}`}
+          />
+          <FieldError message={errors.name} />
+          <label className="mb-1.5 mt-3 block text-sm font-medium text-warm-600">Category</label>
+          <select
+            value={form.category}
+            onChange={(e) => update("category", e.target.value)}
+            className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.category ? "border-terracotta-400" : "border-warm-100"}`}
+          >
+            <option value="">Select</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <FieldError message={errors.category} />
         </div>
       )}
 
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">
-              Name <span className="text-terracotta-500">*</span>
-            </label>
-            <input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="e.g. Moon & Moss Café" className={`w-full rounded-xl border bg-white px-4 py-3 text-warm-700 ${errors.name ? "border-terracotta-400" : "border-warm-100"}`} />
-            <FieldError message={errors.name} />
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">Address</label>
+            <input value={form.address} onChange={(e) => update("address", e.target.value)} className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.address ? "border-terracotta-400" : "border-warm-100"}`} />
+            <FieldError message={errors.address} />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">
-              Category <span className="text-terracotta-500">*</span>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((c) => (
-                <button key={c} type="button" onClick={() => update("category", c)} className={`rounded-xl px-3.5 py-2 text-sm font-medium ${form.category === c ? "bg-warm-500 text-white" : "border border-warm-100 bg-white text-warm-500"}`}>{c}</button>
-              ))}
-            </div>
-            <FieldError message={errors.category} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">
-              Phone <span className="text-terracotta-500">*</span>
-            </label>
-            <input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+91 …" className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.phone ? "border-terracotta-400" : "border-warm-100"}`} />
-            <FieldError message={errors.phone} />
-          </div>
-          {isMobile ? (
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-warm-600">
-                Usually found / operating areas <span className="text-terracotta-500">*</span>
-              </label>
-              <textarea value={form.serviceArea} onChange={(e) => update("serviceArea", e.target.value)} rows={2} placeholder="e.g. Outside IIT main gate on weekends" className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.serviceArea ? "border-terracotta-400" : "border-warm-100"}`} />
-              <FieldError message={errors.serviceArea} />
-            </div>
-          ) : (
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-warm-600">
-                {isHome ? "Public area / city landmark" : "Address"} <span className="text-terracotta-500">*</span>
-              </label>
-              <textarea value={form.address} onChange={(e) => update("address", e.target.value)} rows={2} className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.address ? "border-terracotta-400" : "border-warm-100"}`} />
-              <FieldError message={errors.address} />
-            </div>
-          )}
-          {isHome && (
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-warm-600">Private address (not shown publicly)</label>
-              <input value={form.exactAddressPrivate} onChange={(e) => update("exactAddressPrivate", e.target.value)} className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
-            </div>
-          )}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">
-              City <span className="text-terracotta-500">*</span>
-            </label>
-            <input value={form.city} onChange={(e) => update("city", e.target.value)} placeholder="Delhi" className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.city ? "border-terracotta-400" : "border-warm-100"}`} />
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">City</label>
+            <input value={form.city} onChange={(e) => update("city", e.target.value)} className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.city ? "border-terracotta-400" : "border-warm-100"}`} />
             <FieldError message={errors.city} />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">Hours / schedule</label>
-            <input value={form.hours} onChange={(e) => update("hours", e.target.value)} placeholder="9 AM – 10 PM" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">Business phone (OTP)</label>
+            <input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+91…" className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.phone ? "border-terracotta-400" : "border-warm-100"}`} />
+            <FieldError message={errors.phone} />
           </div>
-          {!isMobile && (
-            <MapPinPicker
-              value={{ lat: form.lat, lng: form.lng }}
-              onChange={({ lat, lng }) => { update("lat", lat); update("lng", lng); }}
-            />
-          )}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">Website (optional)</label>
+            <input value={form.website} onChange={(e) => update("website", e.target.value)} placeholder="https://" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">Hours</label>
+            <input value={form.hours} onChange={(e) => update("hours", e.target.value)} placeholder="Mon–Sun 9am–9pm" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+          </div>
+          <MapPinPicker
+            value={form.lat != null && form.lng != null ? { lat: form.lat, lng: form.lng } : null}
+            onChange={(coords) => {
+              update("lat", coords?.lat ?? null);
+              update("lng", coords?.lng ?? null);
+            }}
+          />
+          <FieldError message={errors.lat} />
         </div>
       )}
 
@@ -364,52 +368,66 @@ export default function RegisterCafePage() {
             </div>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-warm-600">Instagram / WhatsApp / Website</label>
+            <label className="mb-1.5 block text-sm font-medium text-warm-600">Instagram / WhatsApp</label>
             <input value={form.instagram} onChange={(e) => update("instagram", e.target.value)} placeholder="@instagram" className="mb-2 w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
-            <input value={form.whatsapp} onChange={(e) => update("whatsapp", e.target.value)} placeholder="WhatsApp" className="mb-2 w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
-            <input value={form.website} onChange={(e) => update("website", e.target.value)} placeholder="Website" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
+            <input value={form.whatsapp} onChange={(e) => update("whatsapp", e.target.value)} placeholder="WhatsApp" className="w-full rounded-xl border border-warm-100 bg-white px-4 py-3" />
           </div>
         </div>
       )}
 
       {step === 3 && (
-        <div className="space-y-4">
-          <div className="space-y-3 rounded-2xl border border-warm-100 bg-white p-5">
-            <h3 className="text-lg font-bold text-warm-700">{form.name || "Untitled"}</h3>
-            <p className="text-sm text-warm-400">{form.locationType} · {form.category} · {"₹".repeat(form.priceLevel)}</p>
-            {form.description && <p className="text-sm text-warm-500">{form.description}</p>}
-            <p className="text-sm text-warm-400">{isMobile ? form.serviceArea : form.address}{form.city && `, ${form.city}`}</p>
-            {form.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {form.tags.map((t) => (
-                  <span key={t} className="rounded-full bg-warm-100 px-2.5 py-1 text-xs font-medium text-warm-500">{t}</span>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="rounded-xl border border-gold-200 bg-gold-50 px-4 py-3 text-center">
-            <p className="text-sm font-medium text-gold-600">Submit for review — ownership claimed, verification comes after admin approval.</p>
-          </div>
+        <div className="space-y-4 rounded-2xl border border-warm-100 bg-white p-5">
+          <h3 className="text-lg font-bold text-warm-700">Verify business phone</h3>
+          <p className="text-sm text-warm-400">{otpHint || "Enter the OTP sent to your business phone."}</p>
+          <p className="text-xs text-warm-400">In local/dev, check backend logs for the OTP when SMS provider is log.</p>
+          <input
+            value={otpCode}
+            onChange={(e) => setOtpCode(e.target.value)}
+            placeholder="6-digit OTP"
+            className={`w-full rounded-xl border bg-white px-4 py-3 ${errors.otp ? "border-terracotta-400" : "border-warm-100"}`}
+          />
+          <FieldError message={errors.otp} />
+          <button
+            type="button"
+            disabled={submitting || !createdPlaceId}
+            onClick={() => createdPlaceId && startListingPhoneOtp(createdPlaceId, form.phone).then((s) => setOtpHint(s.phone ? `Code sent to ${s.phone}` : "OTP resent"))}
+            className="text-sm font-semibold text-warm-600 underline"
+          >
+            Resend OTP
+          </button>
         </div>
       )}
 
-      <div className="mt-8">
-        {step < 3 ? (
+      <div className="mt-8 flex justify-between gap-3">
+        {step < 2 && (
           <button
             type="button"
-            onClick={tryAdvance}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-warm-600 py-3.5 font-semibold text-white transition hover:bg-terracotta-500 disabled:opacity-50"
+            onClick={nextStep}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-warm-600 px-5 py-3 text-sm font-semibold text-white"
           >
-            Continue <ArrowRight size={18} />
+            Continue <ArrowRight size={16} />
           </button>
-        ) : (
+        )}
+        {step === 2 && (
           <button
             type="button"
-            onClick={handleSubmit}
-            disabled={submitting || !canSubmit()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-sage-400 py-3.5 font-semibold text-white transition hover:bg-sage-500 disabled:opacity-60"
+            disabled={submitting}
+            onClick={createAndSendOtp}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-warm-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {submitting ? <><Loader size={18} className="animate-spin" /> Submitting...</> : "Go live — submit for review"}
+            {submitting ? <Loader className="animate-spin" size={16} /> : null}
+            Create & send OTP
+          </button>
+        )}
+        {step === 3 && (
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={handleVerifyOtp}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-warm-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {submitting ? <Loader className="animate-spin" size={16} /> : null}
+            Verify & go live
           </button>
         )}
       </div>

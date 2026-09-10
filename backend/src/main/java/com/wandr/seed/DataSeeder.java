@@ -94,13 +94,26 @@ public class DataSeeder implements CommandLineRunner {
   }
 
   private void upsertUser(String email, String password, String name, Role role) {
-    if (userRepository.existsByEmailIgnoreCase(email)) return;
+    if (userRepository.existsByEmailIgnoreCase(email)) {
+      userRepository.findByEmailIgnoreCase(email).ifPresent(u -> {
+        if (role == Role.OWNER && !u.isListingFeePaid()) {
+          u.setListingFeePaid(true);
+          u.setListingFeePaidAt(Instant.now());
+          u.setRazorpayPaymentId("seed_listing_fee");
+          userRepository.save(u);
+        }
+      });
+      return;
+    }
     userRepository.save(User.builder()
         .email(email)
         .passwordHash(passwordEncoder.encode(password))
         .displayName(name)
         .role(role)
         .emailVerified(true)
+        .listingFeePaid(role == Role.OWNER || role == Role.ADMIN)
+        .listingFeePaidAt(role == Role.OWNER || role == Role.ADMIN ? Instant.now() : null)
+        .razorpayPaymentId(role == Role.OWNER ? "seed_listing_fee" : null)
         .build());
   }
 
@@ -155,41 +168,53 @@ public class DataSeeder implements CommandLineRunner {
   }
 
   private void seedSpots() {
-    if (!placeMediaRepository.findByStatusAndMediaTypeOrderByCreatedAtDesc(MediaStatus.APPROVED, MediaType.VIDEO).isEmpty()) {
+    long existing = placeMediaRepository.countByStatusAndMediaType(MediaStatus.APPROVED, MediaType.VIDEO);
+    // Always top up if fewer than 5 so Spotted has playable demo reels
+    if (existing >= 5) {
+      // Refresh legacy Google sample URLs to café Mixkit clips when present
+      refreshLegacyDemoSpotUrls();
       return;
     }
+
     User user = userRepository.findByEmailIgnoreCase("user@wandr.test").orElse(null);
     Place moon = placeRepository.findByNameIgnoreCase("Moon & Moss Café").orElse(null);
     Place little = placeRepository.findByNameIgnoreCase("Little Corner Café").orElse(null);
     Place brew = placeRepository.findByNameIgnoreCase("Brew & Bloom").orElse(null);
     Place saffron = placeRepository.findByNameIgnoreCase("Saffron & Sage").orElse(null);
 
-    record Seed(Place place, String url, SpotKind kind, String caption, int likes) {}
+    record Seed(Place place, String url, String thumb, SpotKind kind, String caption, int likes) {}
     List<Seed> seeds = new java.util.ArrayList<>();
     if (moon != null) {
       seeds.add(new Seed(moon,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "https://assets.mixkit.co/videos/5590/5590-720.mp4",
+          "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
           SpotKind.AMBIENCE, "Quiet pour-overs and soft light — worth discovering in Hauz Khas.", 42));
+      seeds.add(new Seed(moon,
+          "https://assets.mixkit.co/videos/43372/43372-720.mp4",
+          "https://assets.mixkit.co/videos/43372/43372-thumb-720-0.jpg",
+          SpotKind.NEW_CAFE, "Morning coffee ritual — freshly opened spot finding its rhythm.", 19));
     }
     if (little != null) {
       seeds.add(new Seed(little,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "https://assets.mixkit.co/videos/5569/5569-720.mp4",
+          "https://assets.mixkit.co/videos/5569/5569-thumb-720-0.jpg",
           SpotKind.HIDDEN_GEM, "A tiny garden café that still feels under the radar.", 88));
     }
     if (brew != null) {
       seeds.add(new Seed(brew,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-          SpotKind.FOOD, "Single-origin flat whites and a work-friendly corner.", 31));
+          "https://assets.mixkit.co/videos/3577/3577-720.mp4",
+          "https://assets.mixkit.co/videos/3577/3577-thumb-720-0.jpg",
+          SpotKind.FOOD, "Espresso machine steam and single-origin flat whites.", 31));
+      seeds.add(new Seed(brew,
+          "https://assets.mixkit.co/videos/5590/5590-720.mp4",
+          "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
+          SpotKind.EXPERIENCE, "Laptop-friendly corner with a proper barista pour.", 27));
     }
     if (saffron != null) {
       seeds.add(new Seed(saffron,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-          SpotKind.NEW_MENU, "New pistachio tiramisu just landed.", 56));
-    }
-    if (moon != null) {
-      seeds.add(new Seed(moon,
-          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-          SpotKind.NEW_CAFE, "Freshly opened — still finding its rhythm.", 19));
+          "https://assets.mixkit.co/videos/46567/46567-720.mp4",
+          "https://assets.mixkit.co/videos/46567/46567-thumb-720-0.jpg",
+          SpotKind.NEW_MENU, "New pistachio tiramisu just landed — dessert hour.", 56));
     }
 
     for (Seed s : seeds) {
@@ -197,14 +222,48 @@ public class DataSeeder implements CommandLineRunner {
           .placeId(s.place().getId())
           .userId(user != null ? user.getId() : null)
           .url(s.url())
+          .thumbnailUrl(s.thumb())
           .mediaType(MediaType.VIDEO)
           .spotKind(s.kind())
           .caption(s.caption())
           .likeCount(s.likes())
-          .durationSec(15)
+          .durationSec(12)
           .source(MediaSource.COMMUNITY)
           .status(MediaStatus.APPROVED)
           .build());
+    }
+  }
+
+  /** Swap old Google sample MP4s for café Mixkit clips so existing DB rows play better. */
+  private void refreshLegacyDemoSpotUrls() {
+    List<PlaceMedia> media = placeMediaRepository.findByStatusAndMediaTypeOrderByCreatedAtDesc(
+        MediaStatus.APPROVED,
+        MediaType.VIDEO,
+        org.springframework.data.domain.PageRequest.of(0, 40)
+    );
+    String[] urls = {
+        "https://assets.mixkit.co/videos/5590/5590-720.mp4",
+        "https://assets.mixkit.co/videos/5569/5569-720.mp4",
+        "https://assets.mixkit.co/videos/3577/3577-720.mp4",
+        "https://assets.mixkit.co/videos/46567/46567-720.mp4",
+        "https://assets.mixkit.co/videos/43372/43372-720.mp4",
+    };
+    String[] thumbs = {
+        "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
+        "https://assets.mixkit.co/videos/5569/5569-thumb-720-0.jpg",
+        "https://assets.mixkit.co/videos/3577/3577-thumb-720-0.jpg",
+        "https://assets.mixkit.co/videos/46567/46567-thumb-720-0.jpg",
+        "https://assets.mixkit.co/videos/43372/43372-thumb-720-0.jpg",
+    };
+    int i = 0;
+    for (PlaceMedia m : media) {
+      String u = m.getUrl() == null ? "" : m.getUrl();
+      if (u.contains("gtv-videos-bucket") || u.contains("ForBigger")) {
+        m.setUrl(urls[i % urls.length]);
+        m.setThumbnailUrl(thumbs[i % thumbs.length]);
+        placeMediaRepository.save(m);
+      }
+      i++;
     }
   }
 

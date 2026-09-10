@@ -26,15 +26,13 @@ import { isVerificationRequiredError } from "../../src/api/auth";
 import { trackEvent } from "../../src/api/spotted";
 import { useAuth } from "../../src/context/AuthContext";
 import { colors } from "../../src/theme";
-import ClaimVerificationPanel from "../../src/components/ClaimVerificationPanel";
 
 const REPORT_REASONS = ["SPAM", "INAPPROPRIATE", "MISLEADING", "COPYRIGHT", "OTHER"];
 
 export default function PlaceDetailScreen() {
-  const { id, upgrade } = useLocalSearchParams<{ id: string; upgrade?: string }>();
+  const { id } = useLocalSearchParams<{ id: string; upgrade?: string }>();
   const { user } = useAuth();
   const router = useRouter();
-  const openUpgrade = upgrade === "1" || upgrade === "true";
   const [place, setPlace] = useState<Place | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [media, setMedia] = useState<any[]>([]);
@@ -58,7 +56,8 @@ export default function PlaceDetailScreen() {
           fetchPlaceSpots(id).catch(() => []),
         ]);
         setPlace(p);
-        setReviews(Array.isArray(r) ? r : []);
+        const reviewList = Array.isArray(r) ? r : [];
+        setReviews(reviewList);
         setMedia(Array.isArray(m) ? m : []);
         setSpots(Array.isArray(s) ? s : []);
         trackEvent("place_view", { placeId: Number(id), source: "mobile_detail" });
@@ -102,6 +101,17 @@ export default function PlaceDetailScreen() {
     displayCount > 0
       ? (reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / displayCount).toFixed(1)
       : null;
+  const myReview =
+    user != null
+      ? reviews.find((r) => r.userId != null && String(r.userId) === String(user.userId))
+      : null;
+
+  useEffect(() => {
+    if (myReview) {
+      setRating(Number(myReview.rating) || 5);
+      setText(myReview.text || "");
+    }
+  }, [myReview?.id]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -217,41 +227,27 @@ export default function PlaceDetailScreen() {
           const status = String(place.ownershipStatus || "").toUpperCase();
           const isOwnListing =
             !!user && place.ownerId != null && String(place.ownerId) === String(user.userId);
-          const canClaim = !!user && !isOwnListing && ["UNCLAIMED", "CLAIM_PENDING"].includes(status);
-          const canRequestAccess =
-            !!user && !isOwnListing && ["OWNER_CLAIMED", "OWNER_VERIFIED"].includes(status);
-          const canUpgrade =
-            !!user && isOwnListing && status !== "OWNER_VERIFIED";
+          const isCommunity = !isOwnListing && ["UNCLAIMED", "CLAIM_PENDING"].includes(status);
+          const isManaged = !isOwnListing && ["OWNER_CLAIMED", "OWNER_VERIFIED"].includes(status);
           return (
             <>
-              {canClaim ? (
+              {isCommunity ? (
                 <>
-                  <Text style={styles.section}>Claim this business</Text>
+                  <Text style={styles.section}>Community added · not an owner listing</Text>
                   <Text style={styles.meta}>
-                    Adding a listing is not ownership. Verify with phone OTP, domain, email, or admin video/docs.
+                    Are you the owner? Sign up as a Café owner and add your listing in Business Hub after the ₹100 unlock.
                   </Text>
-                  <ClaimVerificationPanel placeId={place.id} onComplete={setPlace} />
+                  <Pressable style={styles.button} onPress={() => router.push("/signup")}>
+                    <Text style={styles.buttonText}>Sign up as Café owner</Text>
+                  </Pressable>
                 </>
               ) : null}
-              {canRequestAccess ? (
+              {isManaged ? (
                 <>
-                  <Text style={styles.section}>Already managed</Text>
-                  <Text style={styles.meta}>Request access or open an ownership dispute for admin review.</Text>
-                  <ClaimVerificationPanel placeId={place.id} mode="managed" onComplete={setPlace} />
-                </>
-              ) : null}
-              {canUpgrade ? (
-                <>
-                  <Text style={styles.section}>Complete verification</Text>
+                  <Text style={styles.section}>Managed by the business</Text>
                   <Text style={styles.meta}>
-                    Prove association with phone, website DNS, business email, or admin video/docs.
+                    This listing is claimed by an owner account. Wandr does not offer access disputes here.
                   </Text>
-                  <ClaimVerificationPanel
-                    placeId={place.id}
-                    mode="upgrade"
-                    initialOpen={openUpgrade}
-                    onComplete={setPlace}
-                  />
                 </>
               ) : null}
             </>
@@ -296,7 +292,8 @@ export default function PlaceDetailScreen() {
         <Text style={styles.section}>Reviews</Text>
         {user ? (
           <View style={styles.form}>
-            <Text style={styles.formLabel}>Your rating (1–5)</Text>
+            <Text style={styles.formLabel}>{myReview ? "Update your review (1–5)" : "Your rating (1–5)"}</Text>
+            <Text style={styles.meta}>One review per place — posting again updates it.</Text>
             <TextInput
               style={styles.input}
               keyboardType="number-pad"
@@ -320,7 +317,6 @@ export default function PlaceDetailScreen() {
                   await submitReview(place.id, { rating, text: text.trim() || null });
                   const r = await fetchReviews(id);
                   setReviews(Array.isArray(r) ? r : []);
-                  setText("");
                 } catch (e: any) {
                   if (!handleVerifyGate(e)) setError(e?.message || "Failed to submit");
                 } finally {
@@ -328,17 +324,19 @@ export default function PlaceDetailScreen() {
                 }
               }}
             >
-              <Text style={styles.buttonText}>{saving ? "Posting…" : "Post review"}</Text>
+              <Text style={styles.buttonText}>{saving ? "Saving…" : myReview ? "Save changes" : "Post review"}</Text>
             </Pressable>
           </View>
         ) : (
           <Text style={styles.meta}>Sign in to leave a review.</Text>
         )}
 
-        {reviews.length === 0 ? (
+        {reviews.filter((r) => !(myReview && r.id === myReview.id)).length === 0 && !myReview ? (
           <Text style={styles.meta}>No reviews yet — be the first.</Text>
         ) : (
-          reviews.map((r) => (
+          reviews
+            .filter((r) => !(myReview && r.id === myReview.id))
+            .map((r) => (
             <View key={r.id} style={styles.review}>
               <Text style={styles.reviewName}>
                 {r.userDisplayName || "Guest"} · ★ {r.rating}

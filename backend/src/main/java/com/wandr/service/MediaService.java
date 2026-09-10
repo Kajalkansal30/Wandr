@@ -43,7 +43,7 @@ public class MediaService {
         .mediaType(MediaType.PHOTO)
         .likeCount(0)
         .source(ownerUpload ? MediaSource.OWNER : MediaSource.COMMUNITY)
-        .status(ownerUpload ? MediaStatus.APPROVED : MediaStatus.PENDING)
+        .status(MediaStatus.APPROVED)
         .build());
     return MediaDtos.MediaResponse.from(media);
   }

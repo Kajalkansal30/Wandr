@@ -16,6 +16,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { fetchSpottedFeed, toggleSpotLike, reportSpot } from "../api/spotted";
 import { loadSavedIds, toggleSavedCafe } from "../utils/favorites";
 import { trackEvent } from "../api/analytics";
+import { loadTastePrefs, recordTasteSignals, tokenizeTasteText, topLearnedTags } from "../utils/preferences";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -50,6 +51,14 @@ function SpotSlide({ spot, active, muted, onToggleMute, user, savedIds, setSaved
     if (active) {
       el.play().catch(() => {});
       trackEvent("spot_view", { placeId: place?.id, source: "spotted", metadata: { spotId: spot.id } });
+      const tokens = [
+        ...(place?.tags || []),
+        place?.category,
+        ...(place?.bestFor || []),
+        ...tokenizeTasteText(spot.caption || ""),
+        ...tokenizeTasteText(spot.spotKind || ""),
+      ].filter(Boolean);
+      recordTasteSignals(tokens, 1.5);
     } else {
       el.pause();
     }
@@ -243,6 +252,7 @@ export default function SpottedPage() {
         lat: coords.lat,
         lng: coords.lng,
         filter,
+        prefs: [...loadTastePrefs(), ...topLearnedTags(6)],
       });
       let list = data;
       if (focusId) {

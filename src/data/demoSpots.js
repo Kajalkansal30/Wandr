@@ -1,12 +1,32 @@
-/** Demo Spotted videos when API/DB is unavailable (URL-first, media binaries live in Cloudinary). */
+/** Demo Spotted videos — real playable MP4s (Mixkit café clips) for empty feeds / API fallback. */
 import mockCafes from "./cafes";
 
-const SAMPLE_VIDEOS = [
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+/** Café-themed stock clips + posters (public HTTPS MP4s). */
+const DEMO_CLIPS = [
+  {
+    url: "https://assets.mixkit.co/videos/5590/5590-720.mp4",
+    thumbnailUrl: "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
+  },
+  {
+    url: "https://assets.mixkit.co/videos/5569/5569-720.mp4",
+    thumbnailUrl: "https://assets.mixkit.co/videos/5569/5569-thumb-720-0.jpg",
+  },
+  {
+    url: "https://assets.mixkit.co/videos/3577/3577-720.mp4",
+    thumbnailUrl: "https://assets.mixkit.co/videos/3577/3577-thumb-720-0.jpg",
+  },
+  {
+    url: "https://assets.mixkit.co/videos/46567/46567-720.mp4",
+    thumbnailUrl: "https://assets.mixkit.co/videos/46567/46567-thumb-720-0.jpg",
+  },
+  {
+    url: "https://assets.mixkit.co/videos/43372/43372-720.mp4",
+    thumbnailUrl: "https://assets.mixkit.co/videos/43372/43372-thumb-720-0.jpg",
+  },
+  {
+    url: "https://assets.mixkit.co/videos/5590/5590-720.mp4",
+    thumbnailUrl: "https://assets.mixkit.co/videos/5590/5590-thumb-720-0.jpg",
+  },
 ];
 
 function placeCard(cafe, distance) {
@@ -24,6 +44,9 @@ function placeCard(cafe, distance) {
     operatingStatus: cafe.operatingStatus || "OPEN",
     openedDaysAgo: cafe.openedDaysAgo,
     image: cafe.image,
+    tags: cafe.tags || [],
+    bestFor: cafe.bestFor || [],
+    category: cafe.category,
     distance: distance ?? cafe.distance ?? null,
   };
 }
@@ -32,67 +55,62 @@ const SEED = [
   {
     id: "demo-spot-1",
     placeId: "1",
-    url: SAMPLE_VIDEOS[0],
+    ...DEMO_CLIPS[0],
     spotKind: "AMBIENCE",
     caption: "Quiet pour-overs and soft light — worth discovering in Hauz Khas.",
     likeCount: 42,
-    likedByMe: false,
-    status: "APPROVED",
-    mediaType: "VIDEO",
   },
   {
     id: "demo-spot-2",
     placeId: "2",
-    url: SAMPLE_VIDEOS[1],
+    ...DEMO_CLIPS[1],
     spotKind: "HIDDEN_GEM",
     caption: "A tiny garden café that still feels under the radar.",
     likeCount: 88,
-    likedByMe: false,
-    status: "APPROVED",
-    mediaType: "VIDEO",
   },
   {
     id: "demo-spot-3",
     placeId: "3",
-    url: SAMPLE_VIDEOS[2],
+    ...DEMO_CLIPS[2],
     spotKind: "FOOD",
-    caption: "Single-origin flat whites and a work-friendly corner.",
+    caption: "Espresso machine steam and single-origin flat whites.",
     likeCount: 31,
-    likedByMe: false,
-    status: "APPROVED",
-    mediaType: "VIDEO",
   },
   {
     id: "demo-spot-4",
     placeId: "4",
-    url: SAMPLE_VIDEOS[3],
+    ...DEMO_CLIPS[3],
     spotKind: "NEW_MENU",
-    caption: "New pistachio tiramisu just landed.",
+    caption: "New pistachio tiramisu just landed — dessert hour.",
     likeCount: 56,
-    likedByMe: false,
-    status: "APPROVED",
-    mediaType: "VIDEO",
   },
   {
     id: "demo-spot-5",
     placeId: "1",
-    url: SAMPLE_VIDEOS[4],
+    ...DEMO_CLIPS[4],
     spotKind: "NEW_CAFE",
-    caption: "Freshly opened — still finding its rhythm.",
+    caption: "Morning coffee ritual — freshly opened spot finding its rhythm.",
     likeCount: 19,
-    likedByMe: false,
-    status: "APPROVED",
-    mediaType: "VIDEO",
+  },
+  {
+    id: "demo-spot-6",
+    placeId: "3",
+    ...DEMO_CLIPS[5],
+    spotKind: "EXPERIENCE",
+    caption: "Laptop-friendly corner with a proper barista pour.",
+    likeCount: 27,
   },
 ].map((s) => {
   const cafe = mockCafes.find((c) => String(c.id) === String(s.placeId));
   return {
     ...s,
+    likedByMe: false,
+    status: "APPROVED",
+    mediaType: "VIDEO",
     userId: null,
-    thumbnailUrl: null,
-    durationSec: 15,
+    durationSec: 12,
     source: "COMMUNITY",
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - Math.random() * 3 * 86400000).toISOString(),
     place: placeCard(cafe),
   };
 });

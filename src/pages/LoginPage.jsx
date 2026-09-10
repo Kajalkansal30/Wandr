@@ -117,8 +117,8 @@ export default function LoginPage() {
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-warm-500">
               {businessIntent
-                ? "Sign in with your owner account to manage listings"
-                : "Sign in to save places and get personal picks"}
+                ? "Sign in with your Café owner account for Business Hub. Explorer accounts cannot access owner tools."
+                : "Explorer and Café owner accounts are separate — use the account type you signed up with."}
             </p>
             {user && role === "user" && businessIntent && (
               <p className="mt-3 rounded-xl border border-warm-200 bg-warm-50 px-3 py-2 text-xs text-warm-600">
@@ -216,7 +216,10 @@ export default function LoginPage() {
 
           <p className="mt-8 text-center text-sm text-warm-500">
             Don&apos;t have an account?{" "}
-            <Link to="/signup" className="font-semibold text-warm-700 hover:underline">
+            <Link
+              to={businessIntent ? "/signup?as=owner&next=/owner/dashboard" : "/signup"}
+              className="font-semibold text-warm-700 hover:underline"
+            >
               Sign Up
             </Link>
           </p>

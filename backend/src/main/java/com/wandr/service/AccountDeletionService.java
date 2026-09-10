@@ -3,6 +3,8 @@ package com.wandr.service;
 import com.wandr.domain.OwnershipStatus;
 import com.wandr.domain.Place;
 import com.wandr.domain.PlaceStatus;
+import com.wandr.domain.Review;
+import com.wandr.domain.ReviewStatus;
 import com.wandr.domain.User;
 import com.wandr.repo.*;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +56,24 @@ public class AccountDeletionService {
     refreshTokenRepository.deleteByUserId(userId);
     notificationRepository.deleteByUserId(userId);
     favoriteRepository.deleteByUserId(userId);
-    reviewRepository.anonymizeByUserId(userId);
+
+    // Remove reviews entirely (do not leave "Deleted user" stubs) and refresh place ratings.
+    List<Review> reviews = reviewRepository.findByUserId(userId);
+    java.util.Set<Long> placeIds = reviews.stream()
+        .map(Review::getPlaceId)
+        .filter(id -> id != null)
+        .collect(java.util.stream.Collectors.toSet());
+    reviewRepository.deleteByUserId(userId);
+    for (Long placeId : placeIds) {
+      placeRepository.findById(placeId).ifPresent(place -> {
+        long count = reviewRepository.countByPlaceIdAndStatus(placeId, ReviewStatus.APPROVED);
+        Double avg = reviewRepository.averageRating(placeId, ReviewStatus.APPROVED);
+        place.setReviewCount((int) count);
+        place.setRating(avg == null ? 0.0 : Math.round(avg * 10.0) / 10.0);
+        placeRepository.save(place);
+      });
+    }
+
     spotLikeRepository.deleteByUserId(userId);
     spotReportRepository.deleteByUserId(userId);
     placeReportRepository.deleteByUserId(userId);

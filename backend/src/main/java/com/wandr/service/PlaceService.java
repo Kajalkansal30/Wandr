@@ -212,13 +212,13 @@ public class PlaceService {
         .tags(join(req.tags()))
         .bestFor(join(req.bestFor()))
         .openingDate(req.openingDate())
-        .status(PlaceStatus.PENDING_REVIEW)
-        // Managed by creator but not verified — must complete claim evidence for Verified business
+        .status(PlaceStatus.APPROVED)
         .ownershipStatus(OwnershipStatus.OWNER_CLAIMED)
         .operatingStatus(OperatingStatus.OPEN)
         .claimedAt(java.time.Instant.now())
-        .needsReverification(true)
-        .verificationLevel("PENDING")
+        .needsReverification(false)
+        .verificationLevel("BASIC")
+        .phoneVerified(false)
         .owner(owner)
         .rating(0.0)
         .reviewCount(0)
@@ -256,7 +256,7 @@ public class PlaceService {
         .lng(req.lng())
         .priceLevel(req.priceLevel() != null ? req.priceLevel() : 2)
         .tags(join(req.tags()))
-        .status(PlaceStatus.PENDING_REVIEW)
+        .status(PlaceStatus.APPROVED)
         .ownershipStatus(OwnershipStatus.UNCLAIMED)
         .operatingStatus(OperatingStatus.OPEN)
         .rating(0.0)
@@ -317,9 +317,7 @@ public class PlaceService {
       place.setOwnershipStatus(OwnershipStatus.OWNER_CLAIMED);
       place.setVerificationLevel("REVERIFY");
     }
-    if (place.getStatus() == PlaceStatus.APPROVED || place.getStatus() == PlaceStatus.REJECTED) {
-      place.setStatus(PlaceStatus.PENDING_REVIEW);
-    }
+    // Owner edits stay live — no admin re-queue
     return PlaceDtos.PlaceResponse.from(placeRepository.save(place), null);
   }
 

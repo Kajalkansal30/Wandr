@@ -71,9 +71,21 @@ export default function ReviewSection({ cafeId, canWrite = true, fallbackRating 
   const [submitting, setSubmitting] = useState(false);
   const showForm = Boolean(user) && canWrite;
 
+  const myReview = user
+    ? reviews.find((r) => r.userId != null && String(r.userId) === String(user.uid))
+    : null;
+
   async function load() {
     try {
-      setReviews(await fetchReviews(cafeId));
+      const list = await fetchReviews(cafeId);
+      setReviews(list);
+      const mine = user
+        ? list.find((r) => r.userId != null && String(r.userId) === String(user.uid))
+        : null;
+      if (mine) {
+        setRating(Number(mine.rating) || 0);
+        setText(mine.text || "");
+      }
     } catch {
       setReviews([]);
     }
@@ -83,7 +95,7 @@ export default function ReviewSection({ cafeId, canWrite = true, fallbackRating 
   useEffect(() => {
     setLoading(true);
     load();
-  }, [cafeId]);
+  }, [cafeId, user?.uid]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -92,8 +104,6 @@ export default function ReviewSection({ cafeId, canWrite = true, fallbackRating 
     try {
       await submitReview(cafeId, { rating, text: text.trim() || null, experienceTags: [] });
       trackEvent("review_submit", { placeId: cafeId, source: "detail" });
-      setRating(0);
-      setText("");
       await load();
     } catch (err) {
       alert(err.message || "Failed to submit review");
@@ -117,6 +127,8 @@ export default function ReviewSection({ cafeId, canWrite = true, fallbackRating 
       ? (reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / displayCount).toFixed(1)
       : null;
 
+  const others = myReview ? reviews.filter((r) => r.id !== myReview.id) : reviews;
+
   return (
     <div className="space-y-4">
       <div className="mb-1 flex items-center gap-2 text-sm">
@@ -135,7 +147,12 @@ export default function ReviewSection({ cafeId, canWrite = true, fallbackRating 
 
       {showForm ? (
         <form onSubmit={handleSubmit} className="rounded-xl border border-warm-100 bg-white p-4">
-          <p className="mb-2 text-sm font-semibold text-warm-700">Your review</p>
+          <p className="mb-2 text-sm font-semibold text-warm-700">
+            {myReview ? "Update your review" : "Your review"}
+          </p>
+          <p className="mb-2 text-[11px] text-warm-400">
+            One review per place — posting again updates your existing review.
+          </p>
           <StarRating value={rating} onChange={setRating} />
           <textarea
             value={text}
@@ -150,7 +167,7 @@ export default function ReviewSection({ cafeId, canWrite = true, fallbackRating 
             className="mt-3 inline-flex items-center gap-2 rounded-xl bg-warm-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {submitting ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}
-            Post review
+            {myReview ? "Save changes" : "Post review"}
           </button>
         </form>
       ) : !user ? (
@@ -161,10 +178,10 @@ export default function ReviewSection({ cafeId, canWrite = true, fallbackRating 
         </p>
       ) : null}
 
-      {reviews.length === 0 ? (
+      {others.length === 0 && !myReview ? (
         <p className="py-6 text-center text-sm text-warm-400">No reviews yet — be the first.</p>
       ) : (
-        reviews.map((r) => <ReviewCard key={r.id} review={r} />)
+        others.map((r) => <ReviewCard key={r.id} review={r} />)
       )}
     </div>
   );

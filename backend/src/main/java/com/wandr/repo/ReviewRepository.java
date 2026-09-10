@@ -19,12 +19,14 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
   Optional<Review> findByUserIdAndPlaceId(Long userId, Long placeId);
 
+  List<Review> findByUserId(Long userId);
+
   @Query("SELECT AVG(r.rating) FROM Review r WHERE r.placeId = :placeId AND r.status = :status")
   Double averageRating(@Param("placeId") Long placeId, @Param("status") ReviewStatus status);
 
   long countByPlaceIdAndStatus(Long placeId, ReviewStatus status);
 
   @Modifying
-  @Query("UPDATE Review r SET r.userId = null, r.userDisplayName = 'Deleted user' WHERE r.userId = :userId")
-  int anonymizeByUserId(@Param("userId") Long userId);
+  @Query("DELETE FROM Review r WHERE r.userId = :userId")
+  int deleteByUserId(@Param("userId") Long userId);
 }

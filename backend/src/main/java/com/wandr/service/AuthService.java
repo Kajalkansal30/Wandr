@@ -44,8 +44,8 @@ public class AuthService {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
     }
     Role role = req.role() == null ? Role.USER : req.role();
-    if (role != Role.USER) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only user accounts can self-register");
+    if (role != Role.USER && role != Role.OWNER) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose Explorer or Café owner account");
     }
 
     String verificationToken = UUID.randomUUID().toString();
@@ -53,8 +53,9 @@ public class AuthService {
         .email(req.email().trim().toLowerCase())
         .passwordHash(passwordEncoder.encode(req.password()))
         .displayName(req.displayName().trim())
-        .role(Role.USER)
+        .role(role)
         .emailVerified(false)
+        .listingFeePaid(false)
         .emailVerificationToken(verificationToken)
         .emailVerificationExpiresAt(Instant.now().plus(24, ChronoUnit.HOURS))
         .build();
@@ -241,7 +242,8 @@ public class AuthService {
         user.getDisplayName(),
         user.getRole().name(),
         user.isEmailVerified(),
-        refresh
+        refresh,
+        user.isListingFeePaid()
     );
     return new AuthResult(response, refresh);
   }
